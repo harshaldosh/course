@@ -1,157 +1,135 @@
-import React from 'react';
-import { useTodos } from '../context/TodoContext';
-import { TodoStatus } from '../types';
-import { BarChart3, CheckSquare, Clock, Award, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import './Dashboard.css';
+import React, { useEffect, useState } from 'react';
+import { BookOpen, Users, DollarSign, TrendingUp } from 'lucide-react';
+import { dbService } from '../services/database';
+import type { Course } from '../types/course';
 
 const Dashboard: React.FC = () => {
-  const { todos } = useTodos();
-  
-  const todoCount = todos.filter(todo => todo.status === TodoStatus.TODO).length;
-  const inProgressCount = todos.filter(todo => todo.status === TodoStatus.IN_PROGRESS).length;
-  const completedCount = todos.filter(todo => todo.status === TodoStatus.DONE).length;
-  const totalTodos = todos.length;
-  
-  // Get recent todos
-  const recentTodos = [...todos]
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 6);
-  
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    try {
+      const coursesData = await dbService.getAllCourses();
+      setCourses(coursesData);
+    } catch (error) {
+      console.error('Failed to load courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalRevenue = courses.reduce((acc, course) => acc + course.fees, 0);
+  const totalVideos = courses.reduce((acc, course) => 
+    acc + course.chapters.reduce((chapterAcc, chapter) => chapterAcc + chapter.videos.length, 0), 0
+  );
+
+  const stats = [
+    {
+      title: 'Total Courses',
+      value: courses.length,
+      icon: BookOpen,
+      color: 'bg-blue-500',
+      change: '+12%'
+    },
+    {
+      title: 'Total Students',
+      value: '1,234',
+      icon: Users,
+      color: 'bg-green-500',
+      change: '+8%'
+    },
+    {
+      title: 'Total Revenue',
+      value: `$${totalRevenue.toLocaleString()}`,
+      icon: DollarSign,
+      color: 'bg-yellow-500',
+      change: '+15%'
+    },
+    {
+      title: 'Total Videos',
+      value: totalVideos,
+      icon: TrendingUp,
+      color: 'bg-purple-500',
+      change: '+5%'
+    }
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="dashboard fade-in">
-      <div className="dashboard-header">
-        <h1 className="page-heading">Welcome to TaskFlow</h1>
-        <p className="subtitle">Manage your tasks and boost your productivity</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your courses.</p>
       </div>
-      
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}>
-            <CheckSquare size={24} color="#8B5CF6" />
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <div key={index} className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+              </div>
+              <div className={`${stat.color} p-3 rounded-lg`}>
+                <stat.icon className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center">
+              <span className="text-green-600 text-sm font-medium">{stat.change}</span>
+              <span className="text-gray-600 text-sm ml-2">from last month</span>
+            </div>
           </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{totalTodos}</h2>
-            <p className="stat-label">Total Tasks</p>
-          </div>
-        </div>
-        
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: 'rgba(20, 184, 166, 0.1)' }}>
-            <Award size={24} color="#14B8A6" />
-          </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{completedCount}</h2>
-            <p className="stat-label">Completed</p>
-          </div>
-        </div>
-        
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)' }}>
-            <Clock size={24} color="#EC4899" />
-          </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{inProgressCount}</h2>
-            <p className="stat-label">In Progress</p>
-          </div>
-        </div>
-        
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)' }}>
-            <BarChart3 size={24} color="#EAB308" />
-          </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{todoCount}</h2>
-            <p className="stat-label">To Do</p>
-          </div>
-        </div>
+        ))}
       </div>
-      
-      <div className="dashboard-content">
-        <div className="recent-works">
-          <div className="section-header">
-            <h2 className="section-title">Recent Tasks</h2>
-            <Link to="/todo" className="view-all">
-              View All <ArrowRight size={16} />
-            </Link>
-          </div>
-          
-          <div className="recent-grid">
-            {recentTodos.length > 0 ? (
-              recentTodos.map(todo => (
-                <div key={todo.id} className="recent-item">
-                  <div className="recent-item-content">
-                    <h3 className="recent-item-title">{todo.title}</h3>
-                    <div className="recent-item-meta">
-                      <span className={`status-badge status-${todo.status.replace('_', '-')}`}>
-                        {todo.status.replace('_', ' ')}
-                      </span>
-                      <span className="recent-item-date">
-                        {new Date(todo.createdAt).toLocaleDateString()}
-                      </span>
+
+      {/* Recent Courses */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Recent Courses</h2>
+        </div>
+        <div className="p-6">
+          {courses.length === 0 ? (
+            <div className="text-center py-8">
+              <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No courses available. Create your first course to get started!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {courses.slice(0, 5).map((course) => (
+                <div key={course.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center">
+                    <img 
+                      src={course.image} 
+                      alt={course.title}
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
+                    <div className="ml-4">
+                      <h3 className="font-medium text-gray-900">{course.title}</h3>
+                      <p className="text-sm text-gray-600">{course.chapters.length} chapters</p>
                     </div>
                   </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">${course.fees}</p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(course.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-              ))
-            ) : (
-              <div className="empty-state">
-                <p>No tasks yet. Start organizing your work!</p>
-                <Link to="/todo" className="button-primary">
-                  Create Task
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="category-breakdown">
-          <div className="section-header">
-            <h2 className="section-title">Task Status</h2>
-          </div>
-          
-          <div className="category-list">
-            <div className="category-item">
-              <div className="category-name">To Do</div>
-              <div className="category-bar-container">
-                <div 
-                  className="category-bar" 
-                  style={{ 
-                    width: `${totalTodos > 0 ? (todoCount / totalTodos) * 100 : 0}%`,
-                    backgroundColor: '#8B5CF6'
-                  }}
-                ></div>
-              </div>
-              <div className="category-count">{todoCount}</div>
+              ))}
             </div>
-            
-            <div className="category-item">
-              <div className="category-name">In Progress</div>
-              <div className="category-bar-container">
-                <div 
-                  className="category-bar" 
-                  style={{ 
-                    width: `${totalTodos > 0 ? (inProgressCount / totalTodos) * 100 : 0}%`,
-                    backgroundColor: '#EC4899'
-                  }}
-                ></div>
-              </div>
-              <div className="category-count">{inProgressCount}</div>
-            </div>
-            
-            <div className="category-item">
-              <div className="category-name">Completed</div>
-              <div className="category-bar-container">
-                <div 
-                  className="category-bar" 
-                  style={{ 
-                    width: `${totalTodos > 0 ? (completedCount / totalTodos) * 100 : 0}%`,
-                    backgroundColor: '#14B8A6'
-                  }}
-                ></div>
-              </div>
-              <div className="category-count">{completedCount}</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

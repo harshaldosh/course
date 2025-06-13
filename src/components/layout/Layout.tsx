@@ -1,39 +1,28 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import './Layout.css';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
-  
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-  
-  const getPageTitle = () => {
-    const path = location.pathname;
-    
-    if (path === '/' || path === '/dashboard') return 'Dashboard';
-    if (path === '/todo') return 'Todo Board';
-    if (path === '/profile') return 'Profile';
-    if (path === '/settings') return 'Settings';
-    
-    return 'Dashboard';
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
   };
-  
+
   return (
-    <div className="layout">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-      <div className="layout-content">
-        <Header title={getPageTitle()} toggleSidebar={toggleSidebar} />
-        <main className="main-content">
-          {children}
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+        <Header onMenuClick={toggleSidebar} />
+        
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <Outlet />
         </main>
       </div>
     </div>

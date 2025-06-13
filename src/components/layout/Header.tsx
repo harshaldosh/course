@@ -1,79 +1,43 @@
 import React from 'react';
-import { Menu, Bell, Sun, Moon, Search, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import './Header.css';
+import { Menu, Bell, Search } from 'lucide-react';
 
 interface HeaderProps {
-  title: string;
-  toggleSidebar: () => void;
+  onMenuClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, toggleSidebar }) => {
-  const { theme, toggleTheme } = useTheme();
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
-  const handleProfileClick = () => {
-    navigate('/profile');
-  };
-
-  const getUserInitials = () => {
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name
-        .split(' ')
-        .map((name: string) => name[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return user?.email?.slice(0, 2).toUpperCase() || 'U';
-  };
-  
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   return (
-    <header className="header">
-      <div className="header-left">
-        <button className="menu-button" onClick={toggleSidebar} aria-label="Toggle menu">
-          <Menu size={20} />
+    <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-6">
+      {/* Left side */}
+      <div className="flex items-center">
+        <button
+          onClick={onMenuClick}
+          className="p-2 rounded-md text-gray-600 hover:bg-gray-100 lg:hidden"
+        >
+          <Menu className="w-6 h-6" />
         </button>
-        <h1 className="header-title">{title}</h1>
-      </div>
-      
-      <div className="header-search">
-        <div className="search-container">
-          <Search size={18} className="search-icon" />
-          <input type="text" placeholder="Search..." className="search-input" />
+        
+        <div className="hidden md:flex items-center ml-4">
+          <div className="relative">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search courses..."
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64"
+            />
+          </div>
         </div>
       </div>
-      
-      <div className="header-right">
-        <button className="icon-button" onClick={toggleTheme} aria-label="Toggle theme">
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+
+      {/* Right side */}
+      <div className="flex items-center space-x-4">
+        <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg relative">
+          <Bell className="w-6 h-6" />
+          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
-        <button className="icon-button" aria-label="Notifications">
-          <Bell size={20} />
-        </button>
-        <button className="icon-button" onClick={handleSignOut} aria-label="Sign out">
-          <LogOut size={20} />
-        </button>
-        <div className="user-profile">
-          <div 
-            className="avatar" 
-            title={user?.email}
-            onClick={handleProfileClick}
-            style={{ cursor: 'pointer' }}
-          >
-            <span>{getUserInitials()}</span>
-          </div>
+        
+        <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+          A
         </div>
       </div>
     </header>

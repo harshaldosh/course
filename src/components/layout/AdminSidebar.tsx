@@ -1,22 +1,25 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BookOpen, Home, Settings, Users, LogOut, Shield } from 'lucide-react';
+import { BookOpen, Plus, Home, Settings, Users, LogOut, Shield, BarChart3, FileText } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-interface SidebarProps {
+interface AdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { user, signOut, isAdmin } = useAuth();
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
+  const { user, signOut } = useAuth();
 
   const menuItems = [
-    { icon: Home, label: 'Dashboard', path: '/dashboard' },
-    { icon: BookOpen, label: 'Courses', path: '/courses' },
-    { icon: Users, label: 'Students', path: '/students' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: Home, label: 'Admin Dashboard', path: '/admin' },
+    { icon: BookOpen, label: 'Manage Courses', path: '/admin/courses' },
+    { icon: Plus, label: 'Add Course', path: '/admin/courses/add' },
+    { icon: Users, label: 'Manage Students', path: '/admin/students' },
+    { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+    { icon: FileText, label: 'Reports', path: '/admin/reports' },
+    { icon: Settings, label: 'Admin Settings', path: '/admin/settings' },
   ];
 
   const handleSignOut = async () => {
@@ -32,7 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (user?.user_metadata?.full_name) {
       return user.user_metadata.full_name;
     }
-    return user?.email?.split('@')[0] || 'User';
+    return user?.email?.split('@')[0] || 'Admin';
   };
 
   const getUserInitials = (email: string) => {
@@ -53,13 +56,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <div className={`
         fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:z-auto
+        lg:translate-x-0 lg:static lg:z-auto border-r border-gray-200
       `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 bg-primary-600 text-white">
-            <BookOpen className="w-8 h-8 mr-2" />
-            <span className="text-xl font-bold">EduSaaS</span>
+          <div className="flex items-center justify-center h-16 bg-red-600 text-white">
+            <Shield className="w-8 h-8 mr-2" />
+            <span className="text-xl font-bold">Admin Panel</span>
           </div>
 
           {/* Navigation */}
@@ -71,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors ${
-                    isActive ? 'bg-primary-50 text-primary-600 border-r-2 border-primary-600' : ''
+                    isActive ? 'bg-red-50 text-red-600 border-r-2 border-red-600' : ''
                   }`
                 }
               >
@@ -79,39 +82,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {item.label}
               </NavLink>
             ))}
-
-            {/* Admin Panel Link */}
-            {isAdmin && (
-              <>
-                <div className="border-t border-gray-200 my-4"></div>
-                <NavLink
-                  to="/admin"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-red-50 transition-colors ${
-                      isActive ? 'bg-red-50 text-red-600 border-r-2 border-red-600' : ''
-                    }`
-                  }
-                >
-                  <Shield className="w-5 h-5 mr-3 text-red-600" />
-                  <span className="font-medium">Admin Panel</span>
-                </NavLink>
-              </>
-            )}
           </nav>
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center mb-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                {user?.email ? getUserInitials(user.email) : 'U'}
+              <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {user?.email ? getUserInitials(user.email) : 'A'}
               </div>
               <div className="ml-3 flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-700 truncate">{getUserDisplayName()}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                {isAdmin && (
-                  <p className="text-xs text-red-600 font-medium">Administrator</p>
-                )}
+                <p className="text-xs text-red-600 font-medium">Administrator</p>
               </div>
             </div>
             
@@ -129,4 +110,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default Sidebar;
+export default AdminSidebar;

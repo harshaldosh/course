@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout/Layout';
+import AdminLayout from './components/Layout/AdminLayout';
 import HomeRedirect from './components/HomeRedirect';
 import AuthRedirect from './components/AuthRedirect';
 import Login from './pages/Login';
@@ -13,6 +15,8 @@ import Courses from './pages/Courses';
 import CourseAdd from './pages/CourseAdd';
 import CourseDetail from './pages/CourseDetail';
 import CourseEdit from './pages/CourseEdit';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminCourses from './pages/admin/AdminCourses';
 
 function App() {
   return (
@@ -30,8 +34,6 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="courses" element={<Courses />} />
               <Route path="courses/:id" element={<CourseDetail />} />
-              <Route path="courses/:id/edit" element={<CourseEdit />} />
-              <Route path="courseadd" element={<CourseAdd />} />
               <Route path="students" element={
                 <div className="p-6">
                   <h1 className="text-2xl font-bold">Students</h1>
@@ -45,6 +47,30 @@ function App() {
                 </div>
               } />
             </Route>
+
+            {/* Admin-only routes */}
+            <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="courses" element={<AdminCourses />} />
+              <Route path="courses/add" element={<CourseAdd />} />
+              <Route path="courses/:id/edit" element={<CourseEdit />} />
+              <Route path="students" element={
+                <div className="p-6">
+                  <h1 className="text-2xl font-bold">Student Management</h1>
+                  <p className="text-gray-600 mt-2">Admin student management coming soon...</p>
+                </div>
+              } />
+              <Route path="settings" element={
+                <div className="p-6">
+                  <h1 className="text-2xl font-bold">Admin Settings</h1>
+                  <p className="text-gray-600 mt-2">Admin settings panel coming soon...</p>
+                </div>
+              } />
+            </Route>
+
+            {/* Legacy admin routes (redirect to new admin routes) */}
+            <Route path="/courseadd" element={<AdminRoute><CourseAdd /></AdminRoute>} />
+            <Route path="/courses/:id/edit" element={<AdminRoute><CourseEdit /></AdminRoute>} />
 
             {/* Catch-all route */}
             <Route path="*" element={<AuthRedirect />} />

@@ -28,7 +28,13 @@ const Login: React.FC = () => {
     
     try {
       await signIn(email, password);
-      navigate(from, { replace: true });
+      
+      // Check if admin and redirect accordingly
+      if (email === 'harshal9901@gmail.com') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Failed to sign in');
@@ -156,16 +162,26 @@ const Login: React.FC = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Demo Account</span>
+                <span className="px-2 bg-white text-gray-500">Demo Accounts</span>
               </div>
             </div>
 
-            <div className="mt-6 bg-gray-50 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Demo Credentials:</strong>
-              </p>
-              <p className="text-xs text-gray-500 mb-1">Email: demo@edusaas.com</p>
-              <p className="text-xs text-gray-500">Password: demo123</p>
+            <div className="mt-6 space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Admin Account:</strong>
+                </p>
+                <p className="text-xs text-gray-500 mb-1">Email: harshal9901@gmail.com</p>
+                <p className="text-xs text-gray-500">Password: admin@123</p>
+              </div>
+              
+              <div className="bg-blue-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Student Account:</strong>
+                </p>
+                <p className="text-xs text-gray-500 mb-1">Email: demo@edusaas.com</p>
+                <p className="text-xs text-gray-500">Password: demo123</p>
+              </div>
             </div>
           </div>
         </div>

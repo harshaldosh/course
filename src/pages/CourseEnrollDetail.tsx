@@ -4,8 +4,11 @@ import { ArrowLeft, Play, Clock, DollarSign, Download, Check, ExternalLink, Bot,
 import { dbService } from '../services/database';
 import { enrollmentService } from '../services/enrollment';
 import type { Course } from '../types/course';
+import SpecialDownloadsSection from '../components/SpecialDownloadsSection';
+import KnowledgeBaseModal from '../components/KnowledgeBaseModal';
+import CourseOverviewSidebar from '../components/CourseOverviewSidebar';
 import toast from 'react-hot-toast';
-import '../styles/course-management.css';
+import '../styles/course-enroll-detail.css';
 
 const CourseEnrollDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -329,9 +332,9 @@ const CourseEnrollDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        <p className="ml-4 text-gray-700 text-responsive-sm">Loading course details...</p>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Loading course details...</p>
       </div>
     );
   }
@@ -339,10 +342,10 @@ const CourseEnrollDetail: React.FC = () => {
   if (!course) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-responsive-lg font-bold text-gray-900 mb-4">Course not found</h2>
+        <h2 className="text-responsive-lg-enhanced font-bold text-gray-900 mb-4">Course not found</h2>
         <button
           onClick={() => navigate('/courses')}
-          className="btn-responsive bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="btn-responsive-enhanced bg-blue-600 text-white hover:bg-blue-700"
         >
           Back to Courses
         </button>
@@ -361,26 +364,26 @@ const CourseEnrollDetail: React.FC = () => {
   const allDocuments = getAllDocuments();
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="course-enroll-layout space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-4">
+      <div className="course-enroll-header">
+        <div className="course-enroll-title-section">
           <button
             onClick={() => navigate('/courses')}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div>
-            <h1 className="text-responsive-lg font-bold text-gray-900">{course.title}</h1>
-            <p className="text-gray-600 mt-2 text-responsive-sm">Enrolled Course</p>
+            <h1 className="text-responsive-lg-enhanced font-bold text-gray-900">{course.title}</h1>
+            <p className="text-gray-600 mt-2 text-responsive-enhanced">Enrolled Course</p>
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="course-enroll-actions">
           <button
             onClick={() => setShowKnowledgeBase(!showKnowledgeBase)}
-            className="btn-responsive bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+            className="btn-responsive-enhanced bg-blue-600 text-white hover:bg-blue-700"
           >
             <BookOpen className="w-4 h-4 mr-2" />
             Knowledge Base
@@ -388,7 +391,7 @@ const CourseEnrollDetail: React.FC = () => {
           <button
             onClick={refreshCourse}
             disabled={loading}
-            className="btn-responsive bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+            className="btn-responsive-enhanced bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
           >
             {loading ? 'Refreshing...' : 'Refresh Content'}
           </button>
@@ -397,23 +400,23 @@ const CourseEnrollDetail: React.FC = () => {
 
       {/* Tab Navigation */}
       {activeTab !== 'content' && (
-        <div className="bg-white rounded-lg shadow-md card-responsive">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="tab-navigation">
+          <div className="tab-nav-content">
+            <div className="tab-back-section">
               <button
                 onClick={backToContent}
-                className="flex items-center btn-responsive text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="btn-responsive-enhanced text-gray-600 hover:bg-gray-100"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Course Content
               </button>
-              <div className="text-responsive-base font-semibold text-gray-900">
+              <div className="text-responsive-lg-enhanced font-semibold text-gray-900">
                 {selectedContent?.title}
               </div>
             </div>
             <button
               onClick={backToContent}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -422,138 +425,46 @@ const CourseEnrollDetail: React.FC = () => {
       )}
 
       {/* Knowledge Base Modal */}
-      {showKnowledgeBase && (
-        <div className="bg-white rounded-lg shadow-md card-responsive space-responsive">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-responsive-lg font-semibold text-gray-900">Knowledge Base - All Documents</h2>
-            <button
-              onClick={() => setShowKnowledgeBase(false)}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              ✕
-            </button>
-          </div>
-          
-          {allDocuments.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-responsive-sm">No documents available in this course.</p>
-            </div>
-          ) : (
-            <div className="knowledge-base-grid">
-              {allDocuments.map((doc) => (
-                <div key={doc.id} className="document-card-kb">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center">
-                      <FileText className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0" />
-                      <div>
-                        <h3 className="font-medium text-gray-900 text-responsive-sm">{doc.title}</h3>
-                        <p className="text-xs text-gray-500">Chapter {doc.chapterIndex}: {doc.chapterTitle}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {doc.isSpecial && (
-                        <span className="status-badge status-special">Special</span>
-                      )}
-                      {doc.isCompleted && (
-                        <span className="status-badge status-completed">Completed</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {doc.description && (
-                    <p className="text-responsive-sm text-gray-600 mb-3">{doc.description}</p>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => openDocumentTab(doc.url, doc.title, doc.description || '')}
-                      className="text-blue-600 hover:text-blue-700 text-responsive-sm font-medium flex items-center"
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      View Document
-                    </button>
-                    
-                    {!doc.isSpecial && (
-                      <button
-                        onClick={() => toggleDocumentCompletion(doc.id)}
-                        className={`status-badge ${doc.isCompleted ? 'status-completed' : 'status-pending'}`}
-                      >
-                        <Check className="w-3 h-3 mr-1" />
-                        {doc.isCompleted ? 'Completed' : 'Mark Done'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <KnowledgeBaseModal
+        documents={allDocuments}
+        isVisible={showKnowledgeBase}
+        onClose={() => setShowKnowledgeBase(false)}
+        onDocumentClick={openDocumentTab}
+        onToggleCompletion={toggleDocumentCompletion}
+      />
 
-      <div className="course-grid">
+      <div className="course-enroll-grid">
         {/* Main Content */}
         <div className="space-y-6">
           {activeTab === 'content' && (
             <>
               {/* Course Description */}
-              <div className="bg-white rounded-lg shadow-md card-responsive">
-                <h2 className="text-responsive-base font-semibold text-gray-900 mb-4">About This Course</h2>
-                <p className="text-gray-700 leading-relaxed text-responsive-sm">{course.description}</p>
+              <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+                <h2 className="text-responsive-lg-enhanced font-semibold text-gray-900 mb-4">About This Course</h2>
+                <p className="text-gray-700 leading-relaxed text-responsive-enhanced">{course.description}</p>
               </div>
 
               {/* Special Downloads */}
-              {specialDocuments.length > 0 && (
-                <div className="special-downloads">
-                  <h2 className="text-responsive-base font-semibold mb-2">Special Downloads</h2>
-                  <p className="text-responsive-sm opacity-90 mb-4">
-                    These documents become available when you complete their respective chapters.
-                  </p>
-                  
-                  <div className="downloads-grid">
-                    {specialDocuments.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className={`download-item ${!doc.isUnlocked ? 'disabled' : ''}`}
-                      >
-                        <FileText className="w-8 h-8 mx-auto mb-2" />
-                        <h3 className="font-medium text-responsive-sm mb-1">{doc.title}</h3>
-                        <p className="text-xs opacity-75 mb-2">Chapter {doc.chapterIndex}: {doc.chapterTitle}</p>
-                        
-                        {doc.isUnlocked ? (
-                          <button
-                            onClick={() => openDocumentTab(doc.url, doc.title, doc.description || '')}
-                            className="inline-flex items-center text-responsive-sm font-medium hover:underline"
-                          >
-                            <Download className="w-3 h-3 mr-1" />
-                            Download
-                          </button>
-                        ) : (
-                          <span className="text-xs opacity-75">Complete chapter to unlock</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <SpecialDownloadsSection
+                specialDocuments={specialDocuments}
+                onDocumentClick={openDocumentTab}
+              />
 
               {/* Course Content Table */}
-              <div className="bg-white rounded-lg shadow-md">
-                <div className="card-responsive border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-responsive-base font-semibold text-gray-900">Course Content</h2>
-                    <div className="text-responsive-sm text-gray-600">
+              <div className="content-table-enhanced">
+                <div className="content-table-header">
+                  <div className="content-table-title-row">
+                    <h2 className="text-responsive-lg-enhanced font-semibold text-gray-900">Course Content</h2>
+                    <div className="text-responsive-enhanced text-gray-600">
                       {completedVideoCount} of {totalVideos} videos, {completedDocumentCount} of {totalDocuments} documents completed
                     </div>
                   </div>
                   {totalVideos > 0 && (
-                    <div className="mt-3">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progressPercentage}%` }}
-                        ></div>
-                      </div>
+                    <div className="content-progress-bar">
+                      <div 
+                        className="content-progress-fill"
+                        style={{ width: `${progressPercentage}%` }}
+                      ></div>
                     </div>
                   )}
                 </div>
@@ -585,7 +496,7 @@ const CourseEnrollDetail: React.FC = () => {
                           {/* Chapter Header */}
                           <tr className="bg-gray-50">
                             <td colSpan={5} className="px-6 py-4">
-                              <div className="font-medium text-gray-900 text-responsive-sm">
+                              <div className="font-medium text-gray-900 text-responsive-enhanced">
                                 Chapter {chapterIndex + 1}: {chapter.title}
                               </div>
                               {chapter.description && (
@@ -605,7 +516,7 @@ const CourseEnrollDetail: React.FC = () => {
                                   {item.type === 'document' && <FileText className={`w-4 h-4 mr-3 mt-0.5 flex-shrink-0 ${item.isSpecial ? 'text-green-500' : 'text-yellow-500'}`} />}
                                   {item.type === 'agent' && <Bot className="w-4 h-4 text-purple-500 mr-3 mt-0.5 flex-shrink-0" />}
                                   <div className="min-w-0 content-title">
-                                    <div className="font-medium text-gray-900 text-responsive-sm">
+                                    <div className="font-medium text-gray-900 text-responsive-enhanced">
                                       {chapterIndex + 1}.{itemIndex + 1} {item.title}
                                       {item.type === 'document' && item.isSpecial && <span className="ml-2 text-xs text-green-600 font-medium">(Special)</span>}
                                     </div>
@@ -623,9 +534,9 @@ const CourseEnrollDetail: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 mobile-hidden">
-                                <span className={`status-badge ${
+                                <span className={`status-badge-enhanced ${
                                   item.type === 'video' ? '' : 
-                                  item.type === 'document' && item.isSpecial ? 'status-special' : 
+                                  item.type === 'document' && item.isSpecial ? 'status-special-enhanced' : 
                                   item.type === 'document' ? '' : ''
                                 }`} 
                                       style={{
@@ -646,7 +557,7 @@ const CourseEnrollDetail: React.FC = () => {
                                    'Agent'}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-responsive-sm text-gray-500 mobile-hidden">
+                              <td className="px-6 py-4 text-responsive-enhanced text-gray-500 mobile-hidden">
                                 {item.type === 'video' ? (item.duration || 'N/A') : 
                                  item.type === 'document' ? 'PDF/Doc' : 
                                  'Interactive'}
@@ -655,8 +566,8 @@ const CourseEnrollDetail: React.FC = () => {
                                 {item.type === 'video' && (
                                   <button
                                     onClick={() => toggleVideoCompletion(item.id)}
-                                    className={`status-badge ${
-                                      completedVideos.has(item.id) ? 'status-completed' : 'status-pending'
+                                    className={`status-badge-enhanced ${
+                                      completedVideos.has(item.id) ? 'status-completed-enhanced' : 'status-pending-enhanced'
                                     }`}
                                   >
                                     <Check className="w-3 h-3 mr-1" />
@@ -664,15 +575,15 @@ const CourseEnrollDetail: React.FC = () => {
                                   </button>
                                 )}
                                 {item.type === 'document' && item.isSpecial && (
-                                  <span className={`status-badge ${isChapterComplete(chapter) ? 'status-completed' : 'status-pending'}`}>
+                                  <span className={`status-badge-enhanced ${isChapterComplete(chapter) ? 'status-completed-enhanced' : 'status-pending-enhanced'}`}>
                                     {isChapterComplete(chapter) ? 'Unlocked' : 'Locked'}
                                   </span>
                                 )}
                                 {item.type === 'document' && !item.isSpecial && (
                                   <button
                                     onClick={() => toggleDocumentCompletion(item.id)}
-                                    className={`status-badge ${
-                                      completedDocuments.has(item.id) ? 'status-completed' : 'status-pending'
+                                    className={`status-badge-enhanced ${
+                                      completedDocuments.has(item.id) ? 'status-completed-enhanced' : 'status-pending-enhanced'
                                     }`}
                                   >
                                     <Check className="w-3 h-3 mr-1" />
@@ -680,7 +591,7 @@ const CourseEnrollDetail: React.FC = () => {
                                   </button>
                                 )}
                                 {item.type === 'agent' && (
-                                  <span className="status-badge" style={{backgroundColor: '#f3f4f6', color: '#374151'}}>
+                                  <span className="status-badge-enhanced status-available-enhanced">
                                     Available
                                   </span>
                                 )}
@@ -689,7 +600,7 @@ const CourseEnrollDetail: React.FC = () => {
                                 {item.type === 'video' && item.url && (
                                   <button
                                     onClick={() => openVideoTab(item.url, item.title, item.description || '')}
-                                    className="btn-responsive bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs flex items-center"
+                                    className="btn-responsive-enhanced bg-blue-600 text-white hover:bg-blue-700 text-xs"
                                   >
                                     <ExternalLink className="w-3 h-3 mr-1" />
                                     Watch
@@ -698,7 +609,7 @@ const CourseEnrollDetail: React.FC = () => {
                                 {item.type === 'document' && item.url && (
                                   <button
                                     onClick={() => openDocumentTab(item.url, item.title, item.description || '')}
-                                    className="btn-responsive bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-xs flex items-center"
+                                    className="btn-responsive-enhanced bg-yellow-600 text-white hover:bg-yellow-700 text-xs"
                                   >
                                     <ExternalLink className="w-3 h-3 mr-1" />
                                     View
@@ -712,7 +623,7 @@ const CourseEnrollDetail: React.FC = () => {
                                       item.conversationalContext
                                     )}
                                     disabled={creatingConversation === item.id}
-                                    className="btn-responsive bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                    className="btn-responsive-enhanced bg-purple-600 text-white hover:bg-purple-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     <Bot className="w-3 h-3 mr-1" />
                                     {creatingConversation === item.id ? 'Starting...' : 'Chat'}
@@ -732,7 +643,7 @@ const CourseEnrollDetail: React.FC = () => {
 
           {/* Video Tab */}
           {activeTab === 'video' && selectedContent?.type === 'video' && (
-            <div className="bg-white rounded-lg shadow-md card-responsive">
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden mb-4">
                 <iframe
                   src={selectedContent.url}
@@ -743,7 +654,7 @@ const CourseEnrollDetail: React.FC = () => {
               </div>
               
               {selectedContent.description && (
-                <div className="text-gray-700 text-responsive-sm">
+                <div className="text-gray-700 text-responsive-enhanced">
                   <h4 className="font-medium mb-2">Description:</h4>
                   <p>{selectedContent.description}</p>
                 </div>
@@ -753,7 +664,7 @@ const CourseEnrollDetail: React.FC = () => {
 
           {/* Document Tab */}
           {activeTab === 'document' && selectedContent?.type === 'document' && (
-            <div className="bg-white rounded-lg shadow-md card-responsive">
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-4 flex items-center justify-center">
                 <iframe
                   src={selectedContent.url}
@@ -763,7 +674,7 @@ const CourseEnrollDetail: React.FC = () => {
               </div>
               
               {selectedContent.description && (
-                <div className="text-gray-700 text-responsive-sm">
+                <div className="text-gray-700 text-responsive-enhanced">
                   <h4 className="font-medium mb-2">Description:</h4>
                   <p>{selectedContent.description}</p>
                 </div>
@@ -773,96 +684,15 @@ const CourseEnrollDetail: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Course Stats */}
-          <div className="bg-white rounded-lg shadow-md card-responsive">
-            <h3 className="text-responsive-base font-semibold text-gray-900 mb-4">Course Overview</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-gray-600">
-                  <DollarSign className="w-5 h-5 mr-2" />
-                  <span className="text-responsive-sm">Price</span>
-                </div>
-                <span className="font-semibold text-primary-600 text-responsive-sm">${course.fees}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-gray-600">
-                  <Clock className="w-5 h-5 mr-2" />
-                  <span className="text-responsive-sm">Chapters</span>
-                </div>
-                <span className="font-semibold text-responsive-sm">{course.chapters.length}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-gray-600">
-                  <Play className="w-5 h-5 mr-2" />
-                  <span className="text-responsive-sm">Videos</span>
-                </div>
-                <span className="font-semibold text-responsive-sm">{totalVideos}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-gray-600">
-                  <FileText className="w-5 h-5 mr-2" />
-                  <span className="text-responsive-sm">Documents</span>
-                </div>
-                <span className="font-semibold text-responsive-sm">{totalDocuments}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-gray-600">
-                  <Bot className="w-5 h-5 mr-2" />
-                  <span className="text-responsive-sm">AI Assistants</span>
-                </div>
-                <span className="font-semibold text-responsive-sm">{totalAgents}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-gray-600">
-                  <Check className="w-5 h-5 mr-2" />
-                  <span className="text-responsive-sm">Progress</span>
-                </div>
-                <span className="font-semibold text-green-600 text-responsive-sm">{Math.round(progressPercentage)}%</span>
-              </div>
-            </div>
-
-            {course.courseMaterialUrl && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <a
-                  href={course.courseMaterialUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center w-full btn-responsive bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Course Materials
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* Current Activity */}
-          {activeTab !== 'content' && selectedContent && (
-            <div className="bg-white rounded-lg shadow-md card-responsive">
-              <h3 className="text-responsive-base font-semibold text-gray-900 mb-4">Current Activity</h3>
-              <div className="flex items-center space-x-3">
-                {selectedContent.type === 'video' ? (
-                  <Play className="w-8 h-8 text-blue-600" />
-                ) : selectedContent.type === 'document' ? (
-                  <FileText className="w-8 h-8 text-yellow-600" />
-                ) : (
-                  <Bot className="w-8 h-8 text-purple-600" />
-                )}
-                <div>
-                  <div className="font-medium text-gray-900 text-responsive-sm">{selectedContent.title}</div>
-                  <div className="text-xs text-gray-600 capitalize">{selectedContent.type}</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <CourseOverviewSidebar
+          course={course}
+          totalVideos={totalVideos}
+          totalDocuments={totalDocuments}
+          totalAgents={totalAgents}
+          progressPercentage={progressPercentage}
+          selectedContent={selectedContent}
+          activeTab={activeTab}
+        />
       </div>
     </div>
   );

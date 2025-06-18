@@ -1,0 +1,251 @@
+.admin-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.admin-dashboard-header {
+  margin-bottom: 24px;
+}
+
+.admin-page-heading {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.admin-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+}
+
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.admin-stat-card {
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow);
+  transition: var(--transition-base);
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.admin-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.admin-stat-label {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.admin-stat-change {
+  font-size: 0.75rem;
+  color: var(--success-600);
+  margin: 4px 0 0 0;
+}
+
+.admin-dashboard-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.admin-recent-section {
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.admin-section-header {
+  margin-bottom: 20px;
+}
+
+.admin-section-title {
+  font-size: 1.25rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.admin-plans-list,
+.admin-coupons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-plan-item,
+.admin-coupon-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-base);
+}
+
+.admin-plan-item:hover,
+.admin-coupon-item:hover {
+  background-color: var(--neutral-100);
+}
+
+.dark-theme .admin-plan-item:hover,
+.dark-theme .admin-coupon-item:hover {
+  background-color: var(--neutral-700);
+}
+
+.admin-plan-info,
+.admin-coupon-info {
+  flex: 1;
+}
+
+.admin-plan-name,
+.admin-coupon-code {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.admin-plan-description,
+.admin-coupon-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.admin-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.admin-price-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+.admin-price-period {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+.admin-coupon-discount {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.admin-discount-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--success-600);
+}
+
+.admin-discount-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.admin-quick-actions {
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.admin-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.admin-action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.admin-action-button:hover {
+  background-color: var(--primary-50);
+  border-color: var(--primary-200);
+  color: var(--primary-700);
+}
+
+.dark-theme .admin-action-button:hover {
+  background-color: var(--primary-900);
+  border-color: var(--primary-700);
+  color: var(--primary-300);
+}
+
+@media screen and (max-width: 1024px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .admin-dashboard-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-stat-card {
+    padding: 16px;
+  }
+}

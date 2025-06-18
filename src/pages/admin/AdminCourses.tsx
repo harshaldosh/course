@@ -182,7 +182,7 @@ const AdminCourses: React.FC = () => {
                       <td className="px-6 py-4 text-sm font-medium">
                         <div className="flex items-center space-x-2">
                           <Link
-                            to={`/courses/${course.id}`}
+                            to={`/admin/courses/${course.id}`}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                             title="View Course"
                           >

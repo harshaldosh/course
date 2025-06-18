@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Save } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Save, Video as VideoIcon, Bot } from 'lucide-react';
 import { dbService } from '../services/database';
 import { storageService } from '../lib/storage';
-import type { Course, Chapter, Video } from '../types/course';
+import type { Course, Chapter, Video, Agent } from '../types/course';
 import FileUpload from '../components/FileUpload';
 import toast from 'react-hot-toast';
 
@@ -17,6 +17,9 @@ const CourseEdit: React.FC = () => {
     title: '',
     image: '',
     description: '',
+    agentCourseDescription: '',
+    category: 'Technology' as const,
+    sponsored: false,
     fees: 0,
     courseMaterialUrl: ''
   });
@@ -26,6 +29,7 @@ const CourseEdit: React.FC = () => {
   const [videoFiles, setVideoFiles] = useState<Map<string, File>>(new Map());
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
 
+  const categories = ['Technology', 'Project Management', 'Finance', 'Sustainability'] as const;
   const isAdmin = import.meta.env.VITE_ADMIN_LOGIN === 'true';
 
   useEffect(() => {
@@ -49,12 +53,23 @@ const CourseEdit: React.FC = () => {
           title: courseData.title,
           image: courseData.image,
           description: courseData.description,
+          agentCourseDescription: courseData.agentCourseDescription || '',
+          category: courseData.category || 'Technology',
+          sponsored: courseData.sponsored || false,
           fees: courseData.fees,
           courseMaterialUrl: courseData.courseMaterialUrl || ''
         });
-        setChapters(courseData.chapters);
+        
+        // Ensure chapters have both videos and agents arrays
+        const processedChapters = courseData.chapters.map(chapter => ({
+          ...chapter,
+          videos: chapter.videos || [],
+          agents: chapter.agents || []
+        }));
+        
+        setChapters(processedChapters);
         // Expand all chapters by default
-        setExpandedChapters(new Set(courseData.chapters.map(c => c.id)));
+        setExpandedChapters(new Set(processedChapters.map(c => c.id)));
       } else {
         toast.error('Course not found');
         navigate('/courses');
@@ -68,11 +83,12 @@ const CourseEdit: React.FC = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'fees' ? parseFloat(value) || 0 : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
+               name === 'fees' ? parseFloat(value) || 0 : value
     }));
   };
 
@@ -93,7 +109,8 @@ const CourseEdit: React.FC = () => {
       id: crypto.randomUUID(),
       title: '',
       description: '',
-      videos: []
+      videos: [],
+      agents: []
     };
     setChapters(prev => [...prev, newChapter]);
     setExpandedChapters(prev => new Set([...prev, newChapter.id]));
@@ -126,12 +143,30 @@ const CourseEdit: React.FC = () => {
       title: '',
       url: '',
       duration: '',
-      description: ''
+      description: '',
+      type: 'video'
     };
     
     setChapters(prev => prev.map(chapter => 
       chapter.id === chapterId 
-        ? { ...chapter, videos: [...chapter.videos, newVideo] }
+        ? { ...chapter, videos: [...(chapter.videos || []), newVideo] }
+        : chapter
+    ));
+  };
+
+  const addAgent = (chapterId: string) => {
+    const newAgent: Agent = {
+      id: crypto.randomUUID(),
+      title: '',
+      replicaId: '',
+      conversationalContext: '',
+      description: '',
+      type: 'agent'
+    };
+    
+    setChapters(prev => prev.map(chapter => 
+      chapter.id === chapterId 
+        ? { ...chapter, agents: [...(chapter.agents || []), newAgent] }
         : chapter
     ));
   };
@@ -141,8 +176,21 @@ const CourseEdit: React.FC = () => {
       chapter.id === chapterId 
         ? {
             ...chapter,
-            videos: chapter.videos.map(video => 
+            videos: (chapter.videos || []).map(video => 
               video.id === videoId ? { ...video, [field]: value } : video
+            )
+          }
+        : chapter
+    ));
+  };
+
+  const updateAgent = (chapterId: string, agentId: string, field: keyof Agent, value: string) => {
+    setChapters(prev => prev.map(chapter => 
+      chapter.id === chapterId 
+        ? {
+            ...chapter,
+            agents: (chapter.agents || []).map(agent => 
+              agent.id === agentId ? { ...agent, [field]: value } : agent
             )
           }
         : chapter
@@ -152,13 +200,21 @@ const CourseEdit: React.FC = () => {
   const removeVideo = (chapterId: string, videoId: string) => {
     setChapters(prev => prev.map(chapter => 
       chapter.id === chapterId 
-        ? { ...chapter, videos: chapter.videos.filter(video => video.id !== videoId) }
+        ? { ...chapter, videos: (chapter.videos || []).filter(video => video.id !== videoId) }
         : chapter
     ));
     // Remove video file
     const newVideoFiles = new Map(videoFiles);
     newVideoFiles.delete(videoId);
     setVideoFiles(newVideoFiles);
+  };
+
+  const removeAgent = (chapterId: string, agentId: string) => {
+    setChapters(prev => prev.map(chapter => 
+      chapter.id === chapterId 
+        ? { ...chapter, agents: (chapter.agents || []).filter(agent => agent.id !== agentId) }
+        : chapter
+    ));
   };
 
   const handleVideoFileSelect = (videoId: string, file: File) => {
@@ -176,7 +232,7 @@ const CourseEdit: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.description) {
+    if (!formData.title || !formData.description || !formData.agentCourseDescription) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -206,7 +262,7 @@ const CourseEdit: React.FC = () => {
       const updatedChapters = await Promise.all(
         chapters.map(async (chapter) => {
           const updatedVideos = await Promise.all(
-            chapter.videos.map(async (video) => {
+            (chapter.videos || []).map(async (video) => {
               const videoFile = videoFiles.get(video.id);
               if (videoFile && id) {
                 const videoUrl = await storageService.uploadVideo(videoFile, id, chapter.id);
@@ -215,7 +271,11 @@ const CourseEdit: React.FC = () => {
               return video;
             })
           );
-          return { ...chapter, videos: updatedVideos };
+          return { 
+            ...chapter, 
+            videos: updatedVideos,
+            agents: chapter.agents || []
+          };
         })
       );
       
@@ -271,7 +331,7 @@ const CourseEdit: React.FC = () => {
         </button>
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Edit Course</h1>
-          <p className="text-gray-600 mt-2">Update course information, chapters and videos</p>
+          <p className="text-gray-600 mt-2">Update course information, chapters, videos, and agents</p>
         </div>
       </div>
 
@@ -310,6 +370,37 @@ const CourseEdit: React.FC = () => {
                 required
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category *
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required
+              >
+                {categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="sponsored"
+                id="sponsored"
+                checked={formData.sponsored}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="sponsored" className="ml-2 block text-sm text-gray-900">
+                Sponsored Course
+              </label>
+            </div>
           </div>
           
           <div className="mt-6">
@@ -321,6 +412,21 @@ const CourseEdit: React.FC = () => {
               value={formData.description}
               onChange={handleInputChange}
               rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Agent Course Description *
+            </label>
+            <textarea
+              name="agentCourseDescription"
+              value={formData.agentCourseDescription}
+              onChange={handleInputChange}
+              rows={6}
+              placeholder="Detailed description for AI agents to understand the course content and context..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               required
             />
@@ -371,7 +477,7 @@ const CourseEdit: React.FC = () => {
         {/* Chapters */}
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Chapters & Videos</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Chapters, Videos & Agents</h2>
             <button
               type="button"
               onClick={addChapter}
@@ -405,15 +511,29 @@ const CourseEdit: React.FC = () => {
                         <span className="font-medium text-gray-900 truncate">
                           Chapter {chapterIndex + 1}: {chapter.title || 'Untitled Chapter'}
                         </span>
+                        <span className="text-sm text-gray-500 ml-2">
+                          ({(chapter.videos || []).length} videos, {(chapter.agents || []).length} agents)
+                        </span>
                       </button>
                       
                       <div className="flex items-center space-x-2 flex-shrink-0">
                         <button
                           type="button"
                           onClick={() => addVideo(chapter.id)}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors flex items-center"
+                          title="Add Video"
                         >
-                          <Plus className="w-4 h-4" />
+                          <VideoIcon className="w-4 h-4 mr-1" />
+                          Video
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addAgent(chapter.id)}
+                          className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors flex items-center"
+                          title="Add Agent"
+                        >
+                          <Bot className="w-4 h-4 mr-1" />
+                          Agent
                         </button>
                         <button
                           type="button"
@@ -457,79 +577,143 @@ const CourseEdit: React.FC = () => {
                       </div>
 
                       {/* Videos */}
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-gray-900">Videos</h4>
-                        {chapter.videos.map((video, videoIndex) => (
-                          <div key={video.id} className="p-4 bg-gray-50 rounded-lg space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-700">
-                                Video {videoIndex + 1}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => removeVideo(chapter.id, video.id)}
-                                className="p-1 text-red-600 hover:bg-red-100 rounded"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                              <input
-                                type="text"
-                                placeholder="Video Title"
-                                value={video.title}
-                                onChange={(e) => updateVideo(chapter.id, video.id, 'title', e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                              />
-                              <input
-                                type="text"
-                                placeholder="Duration (e.g., 10:30)"
-                                value={video.duration || ''}
-                                onChange={(e) => updateVideo(chapter.id, video.id, 'duration', e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                              />
-                            </div>
-                            
-                            <div className="space-y-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Video File or URL
-                                </label>
-                                <FileUpload
-                                  label=""
-                                  description="Upload video file (MP4, MOV, AVI) or provide URL below"
-                                  accept="video/*"
-                                  maxSize={500}
-                                  onFileSelect={(file) => handleVideoFileSelect(video.id, file)}
-                                  onFileRemove={() => handleVideoFileRemove(video.id)}
-                                  currentFile={videoFiles.has(video.id) ? videoFiles.get(video.id)?.name : ''}
+                      {(chapter.videos || []).length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-gray-900 flex items-center">
+                            <VideoIcon className="w-4 h-4 mr-2" />
+                            Videos ({(chapter.videos || []).length})
+                          </h4>
+                          {(chapter.videos || []).map((video, videoIndex) => (
+                            <div key={video.id} className="p-4 bg-blue-50 rounded-lg space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Video {videoIndex + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeVideo(chapter.id, video.id)}
+                                  className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                <input
+                                  type="text"
+                                  placeholder="Video Title"
+                                  value={video.title}
+                                  onChange={(e) => updateVideo(chapter.id, video.id, 'title', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Duration (e.g., 10:30)"
+                                  value={video.duration || ''}
+                                  onChange={(e) => updateVideo(chapter.id, video.id, 'duration', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                                 />
                               </div>
                               
-                              <input
-                                type="url"
-                                placeholder="Or provide video URL (YouTube, Vimeo, etc.)"
-                                value={video.url}
-                                onChange={(e) => updateVideo(chapter.id, video.id, 'url', e.target.value)}
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Video File or URL
+                                  </label>
+                                  <FileUpload
+                                    label=""
+                                    description="Upload video file (MP4, MOV, AVI) or provide URL below"
+                                    accept="video/*"
+                                    maxSize={500}
+                                    onFileSelect={(file) => handleVideoFileSelect(video.id, file)}
+                                    onFileRemove={() => handleVideoFileRemove(video.id)}
+                                    currentFile={videoFiles.has(video.id) ? videoFiles.get(video.id)?.name : ''}
+                                  />
+                                </div>
+                                
+                                <input
+                                  type="url"
+                                  placeholder="Or provide video URL (YouTube, Vimeo, etc.)"
+                                  value={video.url}
+                                  onChange={(e) => updateVideo(chapter.id, video.id, 'url', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+                              
+                              <textarea
+                                placeholder="Video description (optional)"
+                                value={video.description || ''}
+                                onChange={(e) => updateVideo(chapter.id, video.id, 'description', e.target.value)}
+                                rows={2}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                               />
                             </div>
-                            
-                            <textarea
-                              placeholder="Video description (optional)"
-                              value={video.description || ''}
-                              onChange={(e) => updateVideo(chapter.id, video.id, 'description', e.target.value)}
-                              rows={2}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                            />
-                          </div>
-                        ))}
-                        
-                        {chapter.videos.length === 0 && (
-                          <p className="text-sm text-gray-500 italic">No videos added to this chapter yet.</p>
-                        )}
-                      </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Agents */}
+                      {(chapter.agents || []).length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-gray-900 flex items-center">
+                            <Bot className="w-4 h-4 mr-2" />
+                            Agents ({(chapter.agents || []).length})
+                          </h4>
+                          {(chapter.agents || []).map((agent, agentIndex) => (
+                            <div key={agent.id} className="p-4 bg-purple-50 rounded-lg space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Agent {agentIndex + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAgent(chapter.id, agent.id)}
+                                  className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                <input
+                                  type="text"
+                                  placeholder="Agent Title"
+                                  value={agent.title}
+                                  onChange={(e) => updateAgent(chapter.id, agent.id, 'title', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Replica ID"
+                                  value={agent.replicaId}
+                                  onChange={(e) => updateAgent(chapter.id, agent.id, 'replicaId', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+                              
+                              <textarea
+                                placeholder="Conversational Context"
+                                value={agent.conversationalContext}
+                                onChange={(e) => updateAgent(chapter.id, agent.id, 'conversationalContext', e.target.value)}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                              />
+                              
+                              <textarea
+                                placeholder="Agent description (optional)"
+                                value={agent.description || ''}
+                                onChange={(e) => updateAgent(chapter.id, agent.id, 'description', e.target.value)}
+                                rows={2}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {(chapter.videos || []).length === 0 && (chapter.agents || []).length === 0 && (
+                        <p className="text-sm text-gray-500 italic">No videos or agents added to this chapter yet.</p>
+                      )}
                     </div>
                   )}
                 </div>

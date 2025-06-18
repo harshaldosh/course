@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Course, Chapter, Video } from '../types/course';
+import type { Course, Chapter, Video, Agent } from '../types/course';
 
 class SupabaseDatabaseService {
   async getAllCourses(): Promise<Course[]> {
@@ -9,7 +9,8 @@ class SupabaseDatabaseService {
         *,
         chapters (
           *,
-          videos (*)
+          videos (*),
+          agents (*)
         )
       `)
       .order('created_at', { ascending: false });
@@ -29,7 +30,8 @@ class SupabaseDatabaseService {
         *,
         chapters (
           *,
-          videos (*)
+          videos (*),
+          agents (*)
         )
       `)
       .eq('id', id)
@@ -54,6 +56,9 @@ class SupabaseDatabaseService {
         title: courseData.title,
         image: courseData.image,
         description: courseData.description,
+        agent_course_description: courseData.agentCourseDescription,
+        category: courseData.category,
+        sponsored: courseData.sponsored,
         fees: courseData.fees,
         course_material_url: courseData.courseMaterialUrl || null
       })
@@ -65,7 +70,7 @@ class SupabaseDatabaseService {
       throw new Error('Failed to create course');
     }
 
-    // Insert chapters and videos
+    // Insert chapters, videos, and agents
     for (let chapterIndex = 0; chapterIndex < courseData.chapters.length; chapterIndex++) {
       const chapterData = courseData.chapters[chapterIndex];
       
@@ -105,6 +110,27 @@ class SupabaseDatabaseService {
           throw new Error('Failed to create videos');
         }
       }
+
+      // Insert agents for this chapter
+      if (chapterData.agents.length > 0) {
+        const agentsToInsert = chapterData.agents.map((agent, agentIndex) => ({
+          chapter_id: chapter.id,
+          title: agent.title,
+          replica_id: agent.replicaId,
+          conversational_context: agent.conversationalContext,
+          description: agent.description || null,
+          order_index: agentIndex
+        }));
+
+        const { error: agentsError } = await supabase
+          .from('agents')
+          .insert(agentsToInsert);
+
+        if (agentsError) {
+          console.error('Error creating agents:', agentsError);
+          throw new Error('Failed to create agents');
+        }
+      }
     }
 
     return course.id;
@@ -117,6 +143,9 @@ class SupabaseDatabaseService {
         title: courseData.title,
         image: courseData.image,
         description: courseData.description,
+        agent_course_description: courseData.agentCourseDescription,
+        category: courseData.category,
+        sponsored: courseData.sponsored,
         fees: courseData.fees,
         course_material_url: courseData.courseMaterialUrl || null
       })
@@ -155,7 +184,18 @@ class SupabaseDatabaseService {
             title: video.title,
             url: video.url,
             duration: video.duration || '',
-            description: video.description || ''
+            description: video.description || '',
+            type: 'video' as const
+          })),
+        agents: (chapter.agents || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((agent: any) => ({
+            id: agent.id,
+            title: agent.title,
+            replicaId: agent.replica_id,
+            conversationalContext: agent.conversational_context,
+            description: agent.description || '',
+            type: 'agent' as const
           }))
       }));
 
@@ -164,6 +204,9 @@ class SupabaseDatabaseService {
       title: courseData.title,
       image: courseData.image,
       description: courseData.description,
+      agentCourseDescription: courseData.agent_course_description || '',
+      category: courseData.category || 'Technology',
+      sponsored: courseData.sponsored || false,
       fees: courseData.fees,
       courseMaterialUrl: courseData.course_material_url || '',
       chapters: sortedChapters,

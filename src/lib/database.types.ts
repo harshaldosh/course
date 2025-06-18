@@ -17,18 +17,24 @@ export interface Database {
           description: string
           fees: number
           course_material_url: string | null
-          created_at: string
-          updated_at: string
+          agent_course_description: string | null
+          category: string | null
+          sponsored: boolean | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
           title: string
           image: string
           description: string
-          fees: number
+          fees?: number
           course_material_url?: string | null
-          created_at?: string
-          updated_at?: string
+          agent_course_description?: string | null
+          category?: string | null
+          sponsored?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
@@ -37,8 +43,11 @@ export interface Database {
           description?: string
           fees?: number
           course_material_url?: string | null
-          created_at?: string
-          updated_at?: string
+          agent_course_description?: string | null
+          category?: string | null
+          sponsored?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
       chapters: {
@@ -48,7 +57,7 @@ export interface Database {
           title: string
           description: string | null
           order_index: number
-          created_at: string
+          created_at: string | null
         }
         Insert: {
           id?: string
@@ -56,7 +65,7 @@ export interface Database {
           title: string
           description?: string | null
           order_index?: number
-          created_at?: string
+          created_at?: string | null
         }
         Update: {
           id?: string
@@ -64,7 +73,7 @@ export interface Database {
           title?: string
           description?: string | null
           order_index?: number
-          created_at?: string
+          created_at?: string | null
         }
       }
       videos: {
@@ -76,7 +85,7 @@ export interface Database {
           duration: string | null
           description: string | null
           order_index: number
-          created_at: string
+          created_at: string | null
         }
         Insert: {
           id?: string
@@ -86,7 +95,7 @@ export interface Database {
           duration?: string | null
           description?: string | null
           order_index?: number
-          created_at?: string
+          created_at?: string | null
         }
         Update: {
           id?: string
@@ -96,7 +105,88 @@ export interface Database {
           duration?: string | null
           description?: string | null
           order_index?: number
-          created_at?: string
+          created_at?: string | null
+        }
+      }
+      agents: {
+        Row: {
+          id: string
+          chapter_id: string
+          title: string
+          replica_id: string
+          conversational_context: string
+          description: string | null
+          order_index: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          chapter_id: string
+          title: string
+          replica_id: string
+          conversational_context: string
+          description?: string | null
+          order_index?: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          chapter_id?: string
+          title?: string
+          replica_id?: string
+          conversational_context?: string
+          description?: string | null
+          order_index?: number
+          created_at?: string | null
+        }
+      }
+      enrollments: {
+        Row: {
+          id: string
+          user_id: string
+          course_id: string
+          enrolled_at: string | null
+          completed_at: string | null
+          progress: Json | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          course_id: string
+          enrolled_at?: string | null
+          completed_at?: string | null
+          progress?: Json | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          course_id?: string
+          enrolled_at?: string | null
+          completed_at?: string | null
+          progress?: Json | null
+        }
+      }
+      profiles: {
+        Row: {
+          id: string
+          full_name: string | null
+          avatar_url: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id: string
+          full_name?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
     }

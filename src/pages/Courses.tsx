@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { dbService } from '../services/database';
+import { enrollmentService } from '../services/enrollment';
 import type { Course } from '../types/course';
 import CourseCard from '../components/CourseCard';
 import toast from 'react-hot-toast';
@@ -9,10 +10,12 @@ import toast from 'react-hot-toast';
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [enrolledCourses, setEnrolledCourses] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
     loadCourses();
+    loadEnrollments();
   }, []);
 
   const loadCourses = async () => {
@@ -27,8 +30,34 @@ const Courses: React.FC = () => {
     }
   };
 
+  const loadEnrollments = async () => {
+    try {
+      const enrollments = await enrollmentService.getUserEnrollments();
+      setEnrolledCourses(new Set(enrollments));
+    } catch (error) {
+      console.error('Failed to load enrollments:', error);
+    }
+  };
+
   const handleCourseClick = (course: Course) => {
-    navigate(`/courses/${course.id}`);
+    const isEnrolled = enrolledCourses.has(course.id);
+    if (isEnrolled) {
+      navigate(`/courses/enrolled/${course.id}`);
+    } else {
+      navigate(`/courses/${course.id}`);
+    }
+  };
+
+  const handleEnroll = async (courseId: string) => {
+    try {
+      await enrollmentService.enrollInCourse(courseId);
+      const newEnrollments = new Set(enrolledCourses);
+      newEnrollments.add(courseId);
+      setEnrolledCourses(newEnrollments);
+      toast.success('Successfully enrolled in course!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to enroll in course');
+    }
   };
 
   const handleAddCourse = () => {
@@ -81,6 +110,8 @@ const Courses: React.FC = () => {
               key={course.id}
               course={course}
               onClick={handleCourseClick}
+              isEnrolled={enrolledCourses.has(course.id)}
+              onEnrollClick={handleEnroll}
             />
           ))}
         </div>

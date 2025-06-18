@@ -14,9 +14,11 @@ import Dashboard from './pages/Dashboard';
 import Courses from './pages/Courses';
 import CourseAdd from './pages/CourseAdd';
 import CourseDetail from './pages/CourseDetail';
+import CourseEnrollDetail from './pages/CourseEnrollDetail';
 import CourseEdit from './pages/CourseEdit';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCourses from './pages/admin/AdminCourses';
+import AdminCourseDetail from './pages/admin/AdminCourseDetail';
 
 function App() {
   return (
@@ -34,6 +36,7 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="courses" element={<Courses />} />
               <Route path="courses/:id" element={<CourseDetail />} />
+              <Route path="courses/enrolled/:id" element={<CourseEnrollDetail />} />
               <Route path="students" element={
                 <div className="p-6">
                   <h1 className="text-2xl font-bold">Students</h1>
@@ -53,6 +56,7 @@ function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="courses" element={<AdminCourses />} />
               <Route path="courses/add" element={<CourseAdd />} />
+              <Route path="courses/:id" element={<AdminCourseDetail />} />
               <Route path="courses/:id/edit" element={<CourseEdit />} />
               <Route path="students" element={
                 <div className="p-6">

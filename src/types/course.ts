@@ -1,6 +1,7 @@
 export interface Chapter {
   id: string;
   title: string;
+  description?: string;
   videos: Video[];
 }
 
@@ -9,6 +10,7 @@ export interface Video {
   title: string;
   url: string;
   duration?: string;
+  description?: string;
 }
 
 export interface Course {
@@ -17,6 +19,7 @@ export interface Course {
   image: string;
   description: string;
   fees: number;
+  courseMaterialUrl?: string;
   chapters: Chapter[];
   createdAt: string;
 }

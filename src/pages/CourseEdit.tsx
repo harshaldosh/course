@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Save } from 'lucide-react';
 import { dbService } from '../services/database';
 import { storageService } from '../lib/storage';
-import type { Chapter, Video } from '../types/course';
+import type { Course, Chapter, Video } from '../types/course';
 import FileUpload from '../components/FileUpload';
 import toast from 'react-hot-toast';
 
-const CourseAdd: React.FC = () => {
+const CourseEdit: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [course, setCourse] = useState<Course | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     image: '',
@@ -22,6 +25,48 @@ const CourseAdd: React.FC = () => {
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [videoFiles, setVideoFiles] = useState<Map<string, File>>(new Map());
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+
+  const isAdmin = import.meta.env.VITE_ADMIN_LOGIN === 'true';
+
+  useEffect(() => {
+    if (!isAdmin) {
+      toast.error('Access denied');
+      navigate('/courses');
+      return;
+    }
+
+    if (id) {
+      loadCourse(id);
+    }
+  }, [id, isAdmin, navigate]);
+
+  const loadCourse = async (courseId: string) => {
+    try {
+      const courseData = await dbService.getCourseById(courseId);
+      if (courseData) {
+        setCourse(courseData);
+        setFormData({
+          title: courseData.title,
+          image: courseData.image,
+          description: courseData.description,
+          fees: courseData.fees,
+          courseMaterialUrl: courseData.courseMaterialUrl || ''
+        });
+        setChapters(courseData.chapters);
+        // Expand all chapters by default
+        setExpandedChapters(new Set(courseData.chapters.map(c => c.id)));
+      } else {
+        toast.error('Course not found');
+        navigate('/courses');
+      }
+    } catch (error) {
+      console.error('Failed to load course:', error);
+      toast.error('Failed to load course');
+      navigate('/courses');
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -147,17 +192,14 @@ const CourseAdd: React.FC = () => {
       let imageUrl = formData.image;
       let materialUrl = formData.courseMaterialUrl;
       
-      // Generate a temporary course ID for file uploads
-      const tempCourseId = crypto.randomUUID();
-      
       // Upload image if file is selected
-      if (imageFile) {
-        imageUrl = await storageService.uploadCourseImage(imageFile, tempCourseId);
+      if (imageFile && id) {
+        imageUrl = await storageService.uploadCourseImage(imageFile, id);
       }
       
       // Upload course material if file is selected
-      if (materialFile) {
-        materialUrl = await storageService.uploadCourseMaterial(materialFile, tempCourseId);
+      if (materialFile && id) {
+        materialUrl = await storageService.uploadCourseMaterial(materialFile, id);
       }
 
       // Upload video files and update URLs
@@ -166,8 +208,8 @@ const CourseAdd: React.FC = () => {
           const updatedVideos = await Promise.all(
             chapter.videos.map(async (video) => {
               const videoFile = videoFiles.get(video.id);
-              if (videoFile) {
-                const videoUrl = await storageService.uploadVideo(videoFile, tempCourseId, chapter.id);
+              if (videoFile && id) {
+                const videoUrl = await storageService.uploadVideo(videoFile, id, chapter.id);
                 return { ...video, url: videoUrl };
               }
               return video;
@@ -177,35 +219,59 @@ const CourseAdd: React.FC = () => {
         })
       );
       
-      await dbService.addCourse({
-        ...formData,
-        image: imageUrl,
-        courseMaterialUrl: materialUrl,
-        chapters: updatedChapters
-      });
-      
-      toast.success('Course created successfully!');
-      navigate('/courses');
+      if (id) {
+        await dbService.updateCourse(id, {
+          ...formData,
+          image: imageUrl,
+          courseMaterialUrl: materialUrl,
+          chapters: updatedChapters
+        });
+        
+        toast.success('Course updated successfully!');
+        navigate(`/courses/${id}`);
+      }
     } catch (error) {
-      console.error('Failed to create course:', error);
-      toast.error('Failed to create course');
+      console.error('Failed to update course:', error);
+      toast.error('Failed to update course');
     } finally {
       setLoading(false);
     }
   };
 
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Course not found</h2>
+        <button
+          onClick={() => navigate('/courses')}
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Back to Courses
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
         <button
-          onClick={() => navigate('/courses')}
+          onClick={() => navigate(`/courses/${id}`)}
           className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg self-start"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Add New Course</h1>
-          <p className="text-gray-600 mt-2">Create a new course with chapters and videos</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Edit Course</h1>
+          <p className="text-gray-600 mt-2">Update course information, chapters and videos</p>
         </div>
       </div>
 
@@ -264,7 +330,7 @@ const CourseAdd: React.FC = () => {
             <div>
               <FileUpload
                 label="Course Image *"
-                description="Upload an image or provide a URL"
+                description="Upload a new image or keep current"
                 accept="image/*"
                 maxSize={5}
                 onFileSelect={setImageFile}
@@ -291,7 +357,7 @@ const CourseAdd: React.FC = () => {
             <div>
               <FileUpload
                 label="Course Materials (Optional)"
-                description="Upload additional course materials (PDF, ZIP, etc.)"
+                description="Upload new materials or keep current"
                 accept=".pdf,.zip,.doc,.docx,.ppt,.pptx"
                 maxSize={50}
                 onFileSelect={setMaterialFile}
@@ -476,7 +542,7 @@ const CourseAdd: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end space-y-4 sm:space-y-0 sm:space-x-4">
           <button
             type="button"
-            onClick={() => navigate('/courses')}
+            onClick={() => navigate(`/courses/${id}`)}
             className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
@@ -484,9 +550,10 @@ const CourseAdd: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating...' : 'Create Course'}
+            <Save className="w-4 h-4 mr-2" />
+            {loading ? 'Updating...' : 'Update Course'}
           </button>
         </div>
       </form>
@@ -494,5 +561,5 @@ const CourseAdd: React.FC = () => {
   );
 };
 
-export default CourseAdd;
+export default CourseEdit;
 // PageResponsiveChecked

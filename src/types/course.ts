@@ -41,7 +41,6 @@ export interface Course {
   image: string;
   description: string;
   agentCourseDescription: string;
-  category: 'Technology' | 'Project Management' | 'Finance' | 'Sustainability';
   sponsored: boolean;
   fees: number;
   courseMaterialUrl?: string;

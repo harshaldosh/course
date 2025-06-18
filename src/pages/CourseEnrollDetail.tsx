@@ -291,6 +291,42 @@ const CourseEnrollDetail: React.FC = () => {
     return allDocs;
   };
 
+  const getContentItems = (chapter: any) => {
+    const items: any[] = [];
+    
+    // Add videos
+    (chapter.videos || []).forEach((video: any, index: number) => {
+      items.push({
+        ...video,
+        type: 'video',
+        sortOrder: `video-${index}`,
+        chapterIndex: course?.chapters.findIndex(c => c.id === chapter.id) || 0
+      });
+    });
+    
+    // Add documents
+    (chapter.documents || []).forEach((document: any, index: number) => {
+      items.push({
+        ...document,
+        type: 'document',
+        sortOrder: `document-${index}`,
+        chapterIndex: course?.chapters.findIndex(c => c.id === chapter.id) || 0
+      });
+    });
+    
+    // Add agents
+    (chapter.agents || []).forEach((agent: any, index: number) => {
+      items.push({
+        ...agent,
+        type: 'agent',
+        sortOrder: `agent-${index}`,
+        chapterIndex: course?.chapters.findIndex(c => c.id === chapter.id) || 0
+      });
+    });
+    
+    return items.sort((a, b) => a.sortOrder.localeCompare(b.sortOrder));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -560,164 +596,128 @@ const CourseEnrollDetail: React.FC = () => {
                             </td>
                           </tr>
                           
-                          {/* Videos */}
-                          {chapter.videos.map((video, videoIndex) => (
-                            <tr key={video.id} className="hover:bg-gray-50">
+                          {/* Content Items */}
+                          {getContentItems(chapter).map((item, itemIndex) => (
+                            <tr key={`${item.type}-${item.id}`} className="hover:bg-gray-50">
                               <td className="px-6 py-4">
                                 <div className="flex items-start">
-                                  <Play className="w-4 h-4 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                                  {item.type === 'video' && <Play className="w-4 h-4 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />}
+                                  {item.type === 'document' && <FileText className={`w-4 h-4 mr-3 mt-0.5 flex-shrink-0 ${item.isSpecial ? 'text-green-500' : 'text-yellow-500'}`} />}
+                                  {item.type === 'agent' && <Bot className="w-4 h-4 text-purple-500 mr-3 mt-0.5 flex-shrink-0" />}
                                   <div className="min-w-0 content-title">
                                     <div className="font-medium text-gray-900 text-responsive-sm">
-                                      {chapterIndex + 1}.{videoIndex + 1} {video.title}
+                                      {chapterIndex + 1}.{itemIndex + 1} {item.title}
+                                      {item.type === 'document' && item.isSpecial && <span className="ml-2 text-xs text-green-600 font-medium">(Special)</span>}
                                     </div>
-                                    {video.description && (
+                                    {item.description && (
                                       <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                        {video.description}
+                                        {item.description}
+                                      </div>
+                                    )}
+                                    {item.type === 'agent' && (
+                                      <div className="text-xs text-purple-600 mt-1">
+                                        AI Assistant
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               </td>
                               <td className="px-6 py-4 mobile-hidden">
-                                <span className="status-badge" style={{backgroundColor: '#dbeafe', color: '#1e40af'}}>
-                                  Video
+                                <span className={`status-badge ${
+                                  item.type === 'video' ? '' : 
+                                  item.type === 'document' && item.isSpecial ? 'status-special' : 
+                                  item.type === 'document' ? '' : ''
+                                }`} 
+                                      style={{
+                                        backgroundColor: 
+                                          item.type === 'video' ? '#dbeafe' : 
+                                          item.type === 'document' && item.isSpecial ? '#ddd6fe' : 
+                                          item.type === 'document' ? '#fef3c7' : 
+                                          '#f3e8ff',
+                                        color: 
+                                          item.type === 'video' ? '#1e40af' : 
+                                          item.type === 'document' && item.isSpecial ? '#5b21b6' : 
+                                          item.type === 'document' ? '#92400e' : 
+                                          '#7c3aed'
+                                      }}>
+                                  {item.type === 'video' ? 'Video' : 
+                                   item.type === 'document' && item.isSpecial ? 'Special Doc' : 
+                                   item.type === 'document' ? 'Document' : 
+                                   'Agent'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-responsive-sm text-gray-500 mobile-hidden">
-                                {video.duration || 'N/A'}
+                                {item.type === 'video' ? (item.duration || 'N/A') : 
+                                 item.type === 'document' ? 'PDF/Doc' : 
+                                 'Interactive'}
                               </td>
                               <td className="px-6 py-4">
-                                <button
-                                  onClick={() => toggleVideoCompletion(video.id)}
-                                  className={`status-badge ${
-                                    completedVideos.has(video.id) ? 'status-completed' : 'status-pending'
-                                  }`}
-                                >
-                                  <Check className="w-3 h-3 mr-1" />
-                                  {completedVideos.has(video.id) ? 'Completed' : 'Mark Done'}
-                                </button>
-                              </td>
-                              <td className="px-6 py-4">
-                                {video.url && (
+                                {item.type === 'video' && (
                                   <button
-                                    onClick={() => openVideoTab(video.url, video.title, video.description || '')}
+                                    onClick={() => toggleVideoCompletion(item.id)}
+                                    className={`status-badge ${
+                                      completedVideos.has(item.id) ? 'status-completed' : 'status-pending'
+                                    }`}
+                                  >
+                                    <Check className="w-3 h-3 mr-1" />
+                                    {completedVideos.has(item.id) ? 'Completed' : 'Mark Done'}
+                                  </button>
+                                )}
+                                {item.type === 'document' && item.isSpecial && (
+                                  <span className={`status-badge ${isChapterComplete(chapter) ? 'status-completed' : 'status-pending'}`}>
+                                    {isChapterComplete(chapter) ? 'Unlocked' : 'Locked'}
+                                  </span>
+                                )}
+                                {item.type === 'document' && !item.isSpecial && (
+                                  <button
+                                    onClick={() => toggleDocumentCompletion(item.id)}
+                                    className={`status-badge ${
+                                      completedDocuments.has(item.id) ? 'status-completed' : 'status-pending'
+                                    }`}
+                                  >
+                                    <Check className="w-3 h-3 mr-1" />
+                                    {completedDocuments.has(item.id) ? 'Completed' : 'Mark Done'}
+                                  </button>
+                                )}
+                                {item.type === 'agent' && (
+                                  <span className="status-badge" style={{backgroundColor: '#f3f4f6', color: '#374151'}}>
+                                    Available
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                {item.type === 'video' && item.url && (
+                                  <button
+                                    onClick={() => openVideoTab(item.url, item.title, item.description || '')}
                                     className="btn-responsive bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs flex items-center"
                                   >
                                     <ExternalLink className="w-3 h-3 mr-1" />
                                     Watch
                                   </button>
                                 )}
-                              </td>
-                            </tr>
-                          ))}
-
-                          {/* Documents */}
-                          {(chapter.documents || []).map((document, docIndex) => (
-                            <tr key={document.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4">
-                                <div className="flex items-start">
-                                  <FileText className={`w-4 h-4 mr-3 mt-0.5 flex-shrink-0 ${document.isSpecial ? 'text-green-500' : 'text-yellow-500'}`} />
-                                  <div className="min-w-0 content-title">
-                                    <div className="font-medium text-gray-900 text-responsive-sm">
-                                      {chapterIndex + 1}.{docIndex + 1} {document.title}
-                                      {document.isSpecial && <span className="ml-2 text-xs text-green-600 font-medium">(Special)</span>}
-                                    </div>
-                                    {document.description && (
-                                      <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                        {document.description}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 mobile-hidden">
-                                <span className={`status-badge ${document.isSpecial ? 'status-special' : ''}`} 
-                                      style={{backgroundColor: document.isSpecial ? '#ddd6fe' : '#fef3c7', 
-                                             color: document.isSpecial ? '#5b21b6' : '#92400e'}}>
-                                  {document.isSpecial ? 'Special Doc' : 'Document'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-responsive-sm text-gray-500 mobile-hidden">
-                                PDF/Doc
-                              </td>
-                              <td className="px-6 py-4">
-                                {document.isSpecial ? (
-                                  <span className={`status-badge ${isChapterComplete(chapter) ? 'status-completed' : 'status-pending'}`}>
-                                    {isChapterComplete(chapter) ? 'Unlocked' : 'Locked'}
-                                  </span>
-                                ) : (
+                                {item.type === 'document' && item.url && (
                                   <button
-                                    onClick={() => toggleDocumentCompletion(document.id)}
-                                    className={`status-badge ${
-                                      completedDocuments.has(document.id) ? 'status-completed' : 'status-pending'
-                                    }`}
-                                  >
-                                    <Check className="w-3 h-3 mr-1" />
-                                    {completedDocuments.has(document.id) ? 'Completed' : 'Mark Done'}
-                                  </button>
-                                )}
-                              </td>
-                              <td className="px-6 py-4">
-                                {document.url && (
-                                  <button
-                                    onClick={() => openDocumentTab(document.url, document.title, document.description || '')}
+                                    onClick={() => openDocumentTab(item.url, item.title, item.description || '')}
                                     className="btn-responsive bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-xs flex items-center"
                                   >
                                     <ExternalLink className="w-3 h-3 mr-1" />
                                     View
                                   </button>
                                 )}
-                              </td>
-                            </tr>
-                          ))}
-
-                          {/* Agents */}
-                          {(chapter.agents || []).map((agent, agentIndex) => (
-                            <tr key={agent.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4">
-                                <div className="flex items-start">
-                                  <Bot className="w-4 h-4 text-purple-500 mr-3 mt-0.5 flex-shrink-0" />
-                                  <div className="min-w-0 content-title">
-                                    <div className="font-medium text-gray-900 text-responsive-sm">
-                                      {chapterIndex + 1}.{agentIndex + 1} {agent.title}
-                                    </div>
-                                    {agent.description && (
-                                      <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                        {agent.description}
-                                      </div>
+                                {item.type === 'agent' && (
+                                  <button
+                                    onClick={() => handleAgentChat(
+                                      item.id,
+                                      item.replicaId, 
+                                      item.conversationalContext
                                     )}
-                                    <div className="text-xs text-purple-600 mt-1">
-                                      AI Assistant
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 mobile-hidden">
-                                <span className="status-badge" style={{backgroundColor: '#f3e8ff', color: '#7c3aed'}}>
-                                  Agent
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-responsive-sm text-gray-500 mobile-hidden">
-                                Interactive
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className="status-badge" style={{backgroundColor: '#f3f4f6', color: '#374151'}}>
-                                  Available
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                <button
-                                  onClick={() => handleAgentChat(
-                                    agent.id,
-                                    agent.replicaId, 
-                                    agent.conversationalContext
-                                  )}
-                                  disabled={creatingConversation === agent.id}
-                                  className="btn-responsive bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                                >
-                                  <Bot className="w-3 h-3 mr-1" />
-                                  {creatingConversation === agent.id ? 'Starting...' : 'Chat'}
-                                </button>
+                                    disabled={creatingConversation === item.id}
+                                    className="btn-responsive bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                  >
+                                    <Bot className="w-3 h-3 mr-1" />
+                                    {creatingConversation === item.id ? 'Starting...' : 'Chat'}
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}

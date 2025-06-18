@@ -16,7 +16,9 @@ export class StorageService {
 
     const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        upsert: true
+      });
 
     if (error) {
       console.error('Upload error:', error);

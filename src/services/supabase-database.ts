@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Course, Chapter, Video, Agent } from '../types/course';
+import type { Course, Chapter, Video, Agent, Document } from '../types/course';
 
 class SupabaseDatabaseService {
   async getAllCourses(): Promise<Course[]> {
@@ -10,7 +10,8 @@ class SupabaseDatabaseService {
         chapters (
           *,
           videos (*),
-          agents (*)
+          agents (*),
+          documents (*)
         )
       `)
       .order('created_at', { ascending: false });
@@ -34,7 +35,8 @@ class SupabaseDatabaseService {
         chapters (
           *,
           videos (*),
-          agents (*)
+          agents (*),
+          documents (*)
         )
       `)
       .eq('id', id)
@@ -60,7 +62,6 @@ class SupabaseDatabaseService {
         image: courseData.image,
         description: courseData.description,
         agent_course_description: courseData.agentCourseDescription,
-        category: courseData.category,
         sponsored: courseData.sponsored,
         fees: courseData.fees,
         course_material_url: courseData.courseMaterialUrl || null
@@ -73,7 +74,7 @@ class SupabaseDatabaseService {
       throw new Error('Failed to create course');
     }
 
-    // Insert chapters, videos, and agents
+    // Insert chapters, videos, agents, and documents
     for (let chapterIndex = 0; chapterIndex < courseData.chapters.length; chapterIndex++) {
       const chapterData = courseData.chapters[chapterIndex];
       
@@ -114,6 +115,27 @@ class SupabaseDatabaseService {
         }
       }
 
+      // Insert documents for this chapter
+      if (chapterData.documents && chapterData.documents.length > 0) {
+        const documentsToInsert = chapterData.documents.map((document, docIndex) => ({
+          chapter_id: chapter.id,
+          title: document.title,
+          url: document.url,
+          description: document.description || null,
+          is_special: document.isSpecial,
+          order_index: docIndex
+        }));
+
+        const { error: documentsError } = await supabase
+          .from('documents')
+          .insert(documentsToInsert);
+
+        if (documentsError) {
+          console.error('Error creating documents:', documentsError);
+          throw new Error('Failed to create documents');
+        }
+      }
+
       // Insert agents for this chapter
       if (chapterData.agents.length > 0) {
         const agentsToInsert = chapterData.agents.map((agent, agentIndex) => ({
@@ -151,7 +173,6 @@ class SupabaseDatabaseService {
         image: courseData.image,
         description: courseData.description,
         agent_course_description: courseData.agentCourseDescription,
-        category: courseData.category,
         sponsored: courseData.sponsored,
         fees: courseData.fees,
         course_material_url: courseData.courseMaterialUrl || null,
@@ -166,7 +187,7 @@ class SupabaseDatabaseService {
 
     // If chapters are provided, update them
     if (courseData.chapters) {
-      // Delete existing chapters (cascade will handle videos and agents)
+      // Delete existing chapters (cascade will handle videos, agents, and documents)
       const { error: deleteError } = await supabase
         .from('chapters')
         .delete()
@@ -177,7 +198,7 @@ class SupabaseDatabaseService {
         throw new Error('Failed to update course chapters');
       }
 
-      // Insert new chapters, videos, and agents
+      // Insert new chapters, videos, agents, and documents
       for (let chapterIndex = 0; chapterIndex < courseData.chapters.length; chapterIndex++) {
         const chapterData = courseData.chapters[chapterIndex];
         
@@ -215,6 +236,27 @@ class SupabaseDatabaseService {
           if (videosError) {
             console.error('Error creating videos:', videosError);
             throw new Error('Failed to create videos');
+          }
+        }
+
+        // Insert documents for this chapter
+        if (chapterData.documents && chapterData.documents.length > 0) {
+          const documentsToInsert = chapterData.documents.map((document, docIndex) => ({
+            chapter_id: chapter.id,
+            title: document.title,
+            url: document.url,
+            description: document.description || null,
+            is_special: document.isSpecial,
+            order_index: docIndex
+          }));
+
+          const { error: documentsError } = await supabase
+            .from('documents')
+            .insert(documentsToInsert);
+
+          if (documentsError) {
+            console.error('Error creating documents:', documentsError);
+            throw new Error('Failed to create documents');
           }
         }
 
@@ -299,6 +341,16 @@ class SupabaseDatabaseService {
             description: video.description || '',
             type: 'video' as const
           })),
+        documents: (chapter.documents || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((document: any) => ({
+            id: document.id,
+            title: document.title,
+            url: document.url,
+            description: document.description || '',
+            isSpecial: document.is_special || false,
+            type: 'document' as const
+          })),
         agents: (chapter.agents || [])
           .sort((a: any, b: any) => a.order_index - b.order_index)
           .map((agent: any) => ({
@@ -317,7 +369,6 @@ class SupabaseDatabaseService {
       image: courseData.image,
       description: courseData.description,
       agentCourseDescription: courseData.agent_course_description || '',
-      category: courseData.category || 'Technology',
       sponsored: courseData.sponsored || false,
       fees: courseData.fees,
       courseMaterialUrl: courseData.course_material_url || '',

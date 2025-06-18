@@ -1,6 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BookOpen, Plus, Home, Settings, Users } from 'lucide-react';
+import { BookOpen, Plus, Home, Settings, Users, LogOut } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -8,13 +10,37 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const { user, signOut } = useAuth();
+  
+  const isAdmin = import.meta.env.VITE_ADMIN_LOGIN === 'true';
+
   const menuItems = [
-    { icon: Home, label: 'Dashboard', path: '/' },
+    { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: BookOpen, label: 'Courses', path: '/courses' },
-    { icon: Plus, label: 'Add Course', path: '/courseadd' },
+    ...(isAdmin ? [{ icon: Plus, label: 'Add Course', path: '/courseadd' }] : []),
     { icon: Users, label: 'Students', path: '/students' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out');
+    }
+  };
+
+  const getUserDisplayName = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    return user?.email?.split('@')[0] || 'User';
+  };
+
+  const getUserInitials = (email: string) => {
+    return email.charAt(0).toUpperCase();
+  };
 
   return (
     <>
@@ -60,15 +86,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center">
+            <div className="flex items-center mb-3">
               <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                A
+                {user?.email ? getUserInitials(user.email) : 'U'}
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">Admin User</p>
-                <p className="text-xs text-gray-500">admin@edusaas.com</p>
+              <div className="ml-3 flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-700 truncate">{getUserDisplayName()}</p>
+                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
               </div>
             </div>
+            
+            <button
+              onClick={handleSignOut}
+              className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4 mr-3" />
+              Sign Out
+            </button>
           </div>
         </div>
       </div>

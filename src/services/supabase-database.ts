@@ -24,6 +24,9 @@ class SupabaseDatabaseService {
   }
 
   async getCourseById(id: string): Promise<Course | null> {
+    // Add cache-busting timestamp to ensure fresh data
+    const timestamp = Date.now();
+    
     const { data: course, error } = await supabase
       .from('courses')
       .select(`
@@ -133,11 +136,15 @@ class SupabaseDatabaseService {
       }
     }
 
+    // Clear any cached course data
+    this.clearCourseCache();
+
     return course.id;
   }
 
   async updateCourse(id: string, courseData: Partial<Omit<Course, 'id' | 'createdAt'>>): Promise<void> {
-    const { error } = await supabase
+    // Update course basic information
+    const { error: courseError } = await supabase
       .from('courses')
       .update({
         title: courseData.title,
@@ -147,14 +154,95 @@ class SupabaseDatabaseService {
         category: courseData.category,
         sponsored: courseData.sponsored,
         fees: courseData.fees,
-        course_material_url: courseData.courseMaterialUrl || null
+        course_material_url: courseData.courseMaterialUrl || null,
+        updated_at: new Date().toISOString()
       })
       .eq('id', id);
 
-    if (error) {
-      console.error('Error updating course:', error);
+    if (courseError) {
+      console.error('Error updating course:', courseError);
       throw new Error('Failed to update course');
     }
+
+    // If chapters are provided, update them
+    if (courseData.chapters) {
+      // Delete existing chapters (cascade will handle videos and agents)
+      const { error: deleteError } = await supabase
+        .from('chapters')
+        .delete()
+        .eq('course_id', id);
+
+      if (deleteError) {
+        console.error('Error deleting existing chapters:', deleteError);
+        throw new Error('Failed to update course chapters');
+      }
+
+      // Insert new chapters, videos, and agents
+      for (let chapterIndex = 0; chapterIndex < courseData.chapters.length; chapterIndex++) {
+        const chapterData = courseData.chapters[chapterIndex];
+        
+        const { data: chapter, error: chapterError } = await supabase
+          .from('chapters')
+          .insert({
+            course_id: id,
+            title: chapterData.title,
+            description: chapterData.description || null,
+            order_index: chapterIndex
+          })
+          .select()
+          .single();
+
+        if (chapterError) {
+          console.error('Error creating chapter:', chapterError);
+          throw new Error('Failed to create chapter');
+        }
+
+        // Insert videos for this chapter
+        if (chapterData.videos.length > 0) {
+          const videosToInsert = chapterData.videos.map((video, videoIndex) => ({
+            chapter_id: chapter.id,
+            title: video.title,
+            url: video.url,
+            duration: video.duration || '',
+            description: video.description || null,
+            order_index: videoIndex
+          }));
+
+          const { error: videosError } = await supabase
+            .from('videos')
+            .insert(videosToInsert);
+
+          if (videosError) {
+            console.error('Error creating videos:', videosError);
+            throw new Error('Failed to create videos');
+          }
+        }
+
+        // Insert agents for this chapter
+        if (chapterData.agents.length > 0) {
+          const agentsToInsert = chapterData.agents.map((agent, agentIndex) => ({
+            chapter_id: chapter.id,
+            title: agent.title,
+            replica_id: agent.replicaId,
+            conversational_context: agent.conversationalContext,
+            description: agent.description || null,
+            order_index: agentIndex
+          }));
+
+          const { error: agentsError } = await supabase
+            .from('agents')
+            .insert(agentsToInsert);
+
+          if (agentsError) {
+            console.error('Error creating agents:', agentsError);
+            throw new Error('Failed to create agents');
+          }
+        }
+      }
+    }
+
+    // Clear any cached course data
+    this.clearCourseCache();
   }
 
   async deleteCourse(id: string): Promise<void> {
@@ -167,6 +255,30 @@ class SupabaseDatabaseService {
       console.error('Error deleting course:', error);
       throw new Error('Failed to delete course');
     }
+
+    // Clear any cached course data
+    this.clearCourseCache();
+  }
+
+  private clearCourseCache(): void {
+    // Clear any browser cache related to courses
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => {
+          if (name.includes('course') || name.includes('api')) {
+            caches.delete(name);
+          }
+        });
+      });
+    }
+
+    // Clear any localStorage cache
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.includes('course') || key.includes('supabase')) {
+        localStorage.removeItem(key);
+      }
+    });
   }
 
   private transformCourseData(courseData: any): Course {

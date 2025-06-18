@@ -7,18 +7,29 @@ import type { Course, Chapter, Video, Agent } from '../types/course';
 import FileUpload from '../components/FileUpload';
 import toast from 'react-hot-toast';
 
+type CourseFormData = {
+  title: string;
+  image: string;
+  description: string;
+  agentCourseDescription: string;
+  category: Course['category'];
+  sponsored: boolean;
+  fees: number;
+  courseMaterialUrl: string;
+};
+
 const CourseEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [course, setCourse] = useState<Course | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CourseFormData>({
     title: '',
     image: '',
     description: '',
     agentCourseDescription: '',
-    category: 'Technology' as const,
+    category: 'Technology',
     sponsored: false,
     fees: 0,
     courseMaterialUrl: ''
@@ -88,7 +99,8 @@ const CourseEdit: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
-               name === 'fees' ? parseFloat(value) || 0 : value
+               name === 'fees' ? parseFloat(value) || 0 :
+               name === 'category' ? value as Course['category'] : value
     }));
   };
 

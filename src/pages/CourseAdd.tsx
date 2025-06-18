@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Upload, Video as VideoIcon, Bot } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Video as VideoIcon, Bot } from 'lucide-react';
 import { dbService } from '../services/database';
 import { storageService } from '../lib/storage';
-import type { Chapter, Video, Agent } from '../types/course';
+import type { Chapter, Video, Agent, Course } from '../types/course';
 import FileUpload from '../components/FileUpload';
 import toast from 'react-hot-toast';
+
+type CourseFormData = {
+  title: string;
+  image: string;
+  description: string;
+  agentCourseDescription: string;
+  category: Course['category'];
+  sponsored: boolean;
+  fees: number;
+  courseMaterialUrl: string;
+};
 
 const CourseAdd: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CourseFormData>({
     title: '',
     image: '',
     description: '',
     agentCourseDescription: '',
-    category: 'Technology' as const,
+    category: 'Technology',
     sponsored: false,
     fees: 0,
     courseMaterialUrl: ''
@@ -33,7 +44,8 @@ const CourseAdd: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
-               name === 'fees' ? parseFloat(value) || 0 : value
+               name === 'fees' ? parseFloat(value) || 0 :
+               name === 'category' ? value as Course['category'] : value
     }));
   };
 

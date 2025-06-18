@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Users, Award, Star, ArrowRight, Play, CheckCircle } from 'lucide-react';
+import { BookOpen, Users, Award, Star, ArrowRight, Play } from 'lucide-react';
 
 const Landing: React.FC = () => {
   const features = [

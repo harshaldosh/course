@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Clock, Users, DollarSign, Download, Check, ExternalLink, Bot, X } from 'lucide-react';
+import { ArrowLeft, Play, Clock, DollarSign, Download, Check, ExternalLink, Bot, X } from 'lucide-react';
 import { dbService } from '../services/database';
 import { enrollmentService } from '../services/enrollment';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 const CourseEnrollDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  //const { user } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [completedVideos, setCompletedVideos] = useState<Set<string>>(new Set());
@@ -32,11 +32,31 @@ const CourseEnrollDetail: React.FC = () => {
     }
   }, [id]);
 
+  // Force reload course data when component mounts or id changes
+  useEffect(() => {
+    // Clear any cached data for this course
+    const clearCourseCache = () => {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes(`course-${id}`) || key.includes('course-progress')) {
+          localStorage.removeItem(key);
+        }
+      });
+    };
+
+    clearCourseCache();
+  }, [id]);
+
   const loadCourse = async (courseId: string) => {
     try {
+      // Add timestamp to force fresh data
+      const timestamp = Date.now();
+      console.log(`Loading course ${courseId} at ${timestamp}`);
+      
       const courseData = await dbService.getCourseById(courseId);
       if (courseData) {
         setCourse(courseData);
+        console.log('Course loaded successfully:', courseData);
       } else {
         toast.error('Course not found. Redirecting to courses list.');
         navigate('/courses');
@@ -96,7 +116,7 @@ const CourseEnrollDetail: React.FC = () => {
       description: videoDescription 
     });
     setActiveTab('video');
-    toast.info(`Now watching: ${videoTitle}`);
+    toast(`Now watching: ${videoTitle}`);
   };
 
   const createTavusConversation = async (agentId: string, replicaId: string, conversationalContext: string) => {
@@ -106,24 +126,22 @@ const CourseEnrollDetail: React.FC = () => {
       // Validate required parameters before making API call
       if (!replicaId || replicaId.trim() === '') {
         toast.error('AI assistant configuration incomplete: Replica ID missing. Please contact support.');
-        setCreatingConversation(null); // Ensure loading state is reset
+        setCreatingConversation(null);
         return;
       }
 
       if (!conversationalContext || conversationalContext.trim() === '') {
         toast.error('AI assistant configuration incomplete: Conversational context missing. Please contact support.');
-        setCreatingConversation(null); // Ensure loading state is reset
+        setCreatingConversation(null);
         return;
       }
       
       const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
       if (!tavusApiKey || tavusApiKey.trim() === '' || tavusApiKey === 'your-tavus-api-key') {
         toast.error('Tavus API key is not configured. Please check your environment variables or contact support.');
-        setCreatingConversation(null); // Ensure loading state is reset
+        setCreatingConversation(null);
         return;
       }
-
-      const userName = getUserDisplayName();
       
       toast.loading('Starting AI conversation...');
 
@@ -132,12 +150,11 @@ const CourseEnrollDetail: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': '00896e7e25494159ac41c349ba50c5f1' 
+          'x-api-key': tavusApiKey
         },
         body: JSON.stringify({
           replica_id: replicaId,
           conversational_context: conversationalContext,
-          
         })
       });
 
@@ -150,15 +167,15 @@ const CourseEnrollDetail: React.FC = () => {
       const data = await response.json();
       
       if (data.conversation_url) {
-        toast.dismiss(); // Dismiss the loading toast
+        toast.dismiss();
         window.open(data.conversation_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
         toast.success('Conversation started successfully! Please check the new pop-up window.');
       } else {
-        toast.dismiss(); // Dismiss the loading toast
+        toast.dismiss();
         throw new Error('No conversation URL received from Tavus API.');
       }
     } catch (error) {
-      toast.dismiss(); // Dismiss any loading toasts
+      toast.dismiss();
       console.error('Failed to create Tavus conversation:', error);
       toast.error(`Failed to start conversation: ${(error as Error).message || 'Please check console for details.'}`);
     } finally {
@@ -166,21 +183,39 @@ const CourseEnrollDetail: React.FC = () => {
     }
   };
 
-  const handleAgentChat = (agentId: string, agentTitle: string, agentDescription: string, replicaId: string, conversationalContext: string) => {
+  const handleAgentChat = (agentId: string, replicaId: string, conversationalContext: string) => {
     createTavusConversation(agentId, replicaId, conversationalContext);
   };
 
   const backToContent = () => {
     setActiveTab('content');
     setSelectedContent(null);
-    toast.info('Back to course content.');
+    toast('Back to course content.');
   };
 
-  const getUserDisplayName = () => {
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name;
+  // Add refresh function to manually reload course data
+  const refreshCourse = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    try {
+      // Clear cache and reload
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes(`course-${id}`)) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      await loadCourse(id);
+      await loadProgress(id);
+      toast.success('Course content refreshed!');
+    } catch (error) {
+      console.error('Failed to refresh course:', error);
+      toast.error('Failed to refresh course content');
+    } finally {
+      setLoading(false);
     }
-    return user?.email?.split('@')[0] || 'Student';
   };
 
   if (loading) {
@@ -227,6 +262,15 @@ const CourseEnrollDetail: React.FC = () => {
             <p className="text-gray-600 mt-2">Enrolled Course</p>
           </div>
         </div>
+        
+        {/* Add refresh button */}
+        <button
+          onClick={refreshCourse}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Refreshing...' : 'Refresh Content'}
+        </button>
       </div>
 
       {/* Tab Navigation */}
@@ -418,8 +462,6 @@ const CourseEnrollDetail: React.FC = () => {
                                 <button
                                   onClick={() => handleAgentChat(
                                     agent.id,
-                                    agent.title, 
-                                    agent.description || '', 
                                     agent.replicaId, 
                                     agent.conversationalContext
                                   )}

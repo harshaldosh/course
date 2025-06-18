@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Video as VideoIcon, Bot } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Video as VideoIcon, Bot, FileText } from 'lucide-react';
 import { dbService } from '../services/database';
 import { storageService } from '../lib/storage';
-import type { Chapter, Video, Agent, Course } from '../types/course';
+import type { Chapter, Video, Agent, Document, Course } from '../types/course';
 import FileUpload from '../components/FileUpload';
 import toast from 'react-hot-toast';
+import '../styles/course-management.css';
 
 type CourseFormData = {
   title: string;
@@ -35,6 +36,7 @@ const CourseAdd: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [videoFiles, setVideoFiles] = useState<Map<string, File>>(new Map());
+  const [documentFiles, setDocumentFiles] = useState<Map<string, File>>(new Map());
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
 
   const categories = ['Technology', 'Project Management', 'Finance', 'Sustainability'] as const;
@@ -67,7 +69,8 @@ const CourseAdd: React.FC = () => {
       title: '',
       description: '',
       videos: [],
-      agents: []
+      agents: [],
+      documents: []
     };
     setChapters(prev => [...prev, newChapter]);
     setExpandedChapters(prev => new Set([...prev, newChapter.id]));
@@ -86,12 +89,17 @@ const CourseAdd: React.FC = () => {
       newSet.delete(chapterId);
       return newSet;
     });
-    // Remove video files for this chapter
+    // Remove files for this chapter
     const newVideoFiles = new Map(videoFiles);
+    const newDocumentFiles = new Map(documentFiles);
     chapters.find(c => c.id === chapterId)?.videos.forEach(video => {
       newVideoFiles.delete(video.id);
     });
+    chapters.find(c => c.id === chapterId)?.documents.forEach(document => {
+      newDocumentFiles.delete(document.id);
+    });
     setVideoFiles(newVideoFiles);
+    setDocumentFiles(newDocumentFiles);
   };
 
   const addVideo = (chapterId: string) => {
@@ -128,6 +136,23 @@ const CourseAdd: React.FC = () => {
     ));
   };
 
+  const addDocument = (chapterId: string) => {
+    const newDocument: Document = {
+      id: crypto.randomUUID(),
+      title: '',
+      url: '',
+      description: '',
+      isSpecial: false,
+      type: 'document'
+    };
+    
+    setChapters(prev => prev.map(chapter => 
+      chapter.id === chapterId 
+        ? { ...chapter, documents: [...chapter.documents, newDocument] }
+        : chapter
+    ));
+  };
+
   const updateVideo = (chapterId: string, videoId: string, field: keyof Video, value: string) => {
     setChapters(prev => prev.map(chapter => 
       chapter.id === chapterId 
@@ -154,13 +179,25 @@ const CourseAdd: React.FC = () => {
     ));
   };
 
+  const updateDocument = (chapterId: string, documentId: string, field: keyof Document, value: string | boolean) => {
+    setChapters(prev => prev.map(chapter => 
+      chapter.id === chapterId 
+        ? {
+            ...chapter,
+            documents: chapter.documents.map(document => 
+              document.id === documentId ? { ...document, [field]: value } : document
+            )
+          }
+        : chapter
+    ));
+  };
+
   const removeVideo = (chapterId: string, videoId: string) => {
     setChapters(prev => prev.map(chapter => 
       chapter.id === chapterId 
         ? { ...chapter, videos: chapter.videos.filter(video => video.id !== videoId) }
         : chapter
     ));
-    // Remove video file
     const newVideoFiles = new Map(videoFiles);
     newVideoFiles.delete(videoId);
     setVideoFiles(newVideoFiles);
@@ -174,6 +211,17 @@ const CourseAdd: React.FC = () => {
     ));
   };
 
+  const removeDocument = (chapterId: string, documentId: string) => {
+    setChapters(prev => prev.map(chapter => 
+      chapter.id === chapterId 
+        ? { ...chapter, documents: chapter.documents.filter(document => document.id !== documentId) }
+        : chapter
+    ));
+    const newDocumentFiles = new Map(documentFiles);
+    newDocumentFiles.delete(documentId);
+    setDocumentFiles(newDocumentFiles);
+  };
+
   const handleVideoFileSelect = (videoId: string, file: File) => {
     const newVideoFiles = new Map(videoFiles);
     newVideoFiles.set(videoId, file);
@@ -184,6 +232,18 @@ const CourseAdd: React.FC = () => {
     const newVideoFiles = new Map(videoFiles);
     newVideoFiles.delete(videoId);
     setVideoFiles(newVideoFiles);
+  };
+
+  const handleDocumentFileSelect = (documentId: string, file: File) => {
+    const newDocumentFiles = new Map(documentFiles);
+    newDocumentFiles.set(documentId, file);
+    setDocumentFiles(newDocumentFiles);
+  };
+
+  const handleDocumentFileRemove = (documentId: string) => {
+    const newDocumentFiles = new Map(documentFiles);
+    newDocumentFiles.delete(documentId);
+    setDocumentFiles(newDocumentFiles);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -218,7 +278,7 @@ const CourseAdd: React.FC = () => {
         materialUrl = await storageService.uploadCourseMaterial(materialFile, tempCourseId);
       }
 
-      // Upload video files and update URLs
+      // Upload files and update URLs
       const updatedChapters = await Promise.all(
         chapters.map(async (chapter) => {
           const updatedVideos = await Promise.all(
@@ -231,7 +291,23 @@ const CourseAdd: React.FC = () => {
               return video;
             })
           );
-          return { ...chapter, videos: updatedVideos };
+
+          const updatedDocuments = await Promise.all(
+            chapter.documents.map(async (document) => {
+              const documentFile = documentFiles.get(document.id);
+              if (documentFile) {
+                const documentUrl = await storageService.uploadCourseMaterial(documentFile, tempCourseId);
+                return { ...document, url: documentUrl };
+              }
+              return document;
+            })
+          );
+
+          return { 
+            ...chapter, 
+            videos: updatedVideos,
+            documents: updatedDocuments
+          };
         })
       );
       
@@ -262,17 +338,17 @@ const CourseAdd: React.FC = () => {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Add New Course</h1>
-          <p className="text-gray-600 mt-2">Create a new course with chapters, videos, and agents</p>
+          <h1 className="text-responsive-lg font-bold text-gray-900">Add New Course</h1>
+          <p className="text-gray-600 mt-2 text-responsive-sm">Create a new course with chapters, videos, agents, and documents</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Information */}
-        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6">Course Information</h2>
+        <div className="bg-white rounded-lg shadow-md card-responsive">
+          <h2 className="text-responsive-base font-semibold text-gray-900 mb-6">Course Information</h2>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="form-grid">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Course Title *
@@ -282,7 +358,7 @@ const CourseAdd: React.FC = () => {
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
                 required
               />
             </div>
@@ -298,7 +374,7 @@ const CourseAdd: React.FC = () => {
                 onChange={handleInputChange}
                 min="0"
                 step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
                 required
               />
             </div>
@@ -311,7 +387,7 @@ const CourseAdd: React.FC = () => {
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
                 required
               >
                 {categories.map(category => (
@@ -344,7 +420,7 @@ const CourseAdd: React.FC = () => {
               value={formData.description}
               onChange={handleInputChange}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
               required
             />
           </div>
@@ -359,12 +435,12 @@ const CourseAdd: React.FC = () => {
               onChange={handleInputChange}
               rows={6}
               placeholder="Detailed description for AI agents to understand the course content and context..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
               required
             />
           </div>
 
-          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="mt-6 form-grid">
             <div>
               <FileUpload
                 label="Course Image *"
@@ -387,7 +463,7 @@ const CourseAdd: React.FC = () => {
                   value={formData.image}
                   onChange={handleInputChange}
                   placeholder="https://example.com/image.jpg"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
                 />
               </div>
             </div>
@@ -407,13 +483,13 @@ const CourseAdd: React.FC = () => {
         </div>
 
         {/* Chapters */}
-        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Chapters, Videos & Agents</h2>
+        <div className="bg-white rounded-lg shadow-md card-responsive">
+          <div className="chapter-header mb-6">
+            <h2 className="text-responsive-base font-semibold text-gray-900">Chapters, Videos, Agents & Documents</h2>
             <button
               type="button"
               onClick={addChapter}
-              className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="btn-responsive bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Chapter
@@ -422,14 +498,14 @@ const CourseAdd: React.FC = () => {
 
           {chapters.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No chapters added yet. Click "Add Chapter" to get started.</p>
+              <p className="text-responsive-sm">No chapters added yet. Click "Add Chapter" to get started.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {chapters.map((chapter, chapterIndex) => (
                 <div key={chapter.id} className="border border-gray-200 rounded-lg">
                   <div className="p-4 bg-gray-50 rounded-t-lg">
-                    <div className="flex items-center justify-between">
+                    <div className="chapter-header">
                       <button
                         type="button"
                         onClick={() => toggleChapter(chapter.id)}
@@ -440,36 +516,45 @@ const CourseAdd: React.FC = () => {
                         ) : (
                           <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
                         )}
-                        <span className="font-medium text-gray-900 truncate">
+                        <span className="font-medium text-gray-900 truncate text-responsive-sm">
                           Chapter {chapterIndex + 1}: {chapter.title || 'Untitled Chapter'}
                         </span>
                       </button>
                       
-                      <div className="flex items-center space-x-2 flex-shrink-0">
+                      <div className="chapter-actions">
                         <button
                           type="button"
                           onClick={() => addVideo(chapter.id)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors flex items-center"
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors flex items-center"
                           title="Add Video"
                         >
-                          <VideoIcon className="w-4 h-4 mr-1" />
+                          <VideoIcon className="w-3 h-3 mr-1" />
                           Video
                         </button>
                         <button
                           type="button"
                           onClick={() => addAgent(chapter.id)}
-                          className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors flex items-center"
+                          className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors flex items-center"
                           title="Add Agent"
                         >
-                          <Bot className="w-4 h-4 mr-1" />
+                          <Bot className="w-3 h-3 mr-1" />
                           Agent
                         </button>
                         <button
                           type="button"
-                          onClick={() => removeChapter(chapter.id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
+                          onClick={() => addDocument(chapter.id)}
+                          className="px-3 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition-colors flex items-center"
+                          title="Add Document"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <FileText className="w-3 h-3 mr-1" />
+                          Document
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeChapter(chapter.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
@@ -477,7 +562,7 @@ const CourseAdd: React.FC = () => {
 
                   {expandedChapters.has(chapter.id) && (
                     <div className="p-4 space-y-4">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="form-grid">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Chapter Title *
@@ -487,7 +572,7 @@ const CourseAdd: React.FC = () => {
                             placeholder={`Chapter ${chapterIndex + 1} Title`}
                             value={chapter.title}
                             onChange={(e) => updateChapter(chapter.id, 'title', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
                           />
                         </div>
                         
@@ -500,7 +585,7 @@ const CourseAdd: React.FC = () => {
                             value={chapter.description}
                             onChange={(e) => updateChapter(chapter.id, 'description', e.target.value)}
                             rows={2}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-responsive-sm"
                           />
                         </div>
                       </div>
@@ -508,13 +593,13 @@ const CourseAdd: React.FC = () => {
                       {/* Videos */}
                       {chapter.videos.length > 0 && (
                         <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900 flex items-center">
+                          <h4 className="font-medium text-gray-900 flex items-center text-responsive-sm">
                             <VideoIcon className="w-4 h-4 mr-2" />
                             Videos
                           </h4>
                           {chapter.videos.map((video, videoIndex) => (
-                            <div key={video.id} className="p-4 bg-blue-50 rounded-lg space-y-3">
-                              <div className="flex items-center justify-between">
+                            <div key={video.id} className="content-item-card video-card">
+                              <div className="content-item-header">
                                 <span className="text-sm font-medium text-gray-700">
                                   Video {videoIndex + 1}
                                 </span>
@@ -527,7 +612,7 @@ const CourseAdd: React.FC = () => {
                                 </button>
                               </div>
                               
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                              <div className="content-item-fields">
                                 <input
                                   type="text"
                                   placeholder="Video Title"
@@ -581,16 +666,97 @@ const CourseAdd: React.FC = () => {
                         </div>
                       )}
 
+                      {/* Documents */}
+                      {chapter.documents.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-gray-900 flex items-center text-responsive-sm">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Documents
+                          </h4>
+                          {chapter.documents.map((document, docIndex) => (
+                            <div key={document.id} className={`content-item-card ${document.isSpecial ? 'special-document-card' : 'document-card'}`}>
+                              <div className="content-item-header">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Document {docIndex + 1} {document.isSpecial && '(Special)'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeDocument(chapter.id, document.id)}
+                                  className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
+                              <div className="content-item-fields">
+                                <input
+                                  type="text"
+                                  placeholder="Document Title"
+                                  value={document.title}
+                                  onChange={(e) => updateDocument(chapter.id, document.id, 'title', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                                />
+                                <div className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    id={`special-${document.id}`}
+                                    checked={document.isSpecial}
+                                    onChange={(e) => updateDocument(chapter.id, document.id, 'isSpecial', e.target.checked)}
+                                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                                  />
+                                  <label htmlFor={`special-${document.id}`} className="ml-2 block text-sm text-gray-900">
+                                    Special Document (unlocks when chapter is complete)
+                                  </label>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Document File or URL
+                                  </label>
+                                  <FileUpload
+                                    label=""
+                                    description="Upload document file (PDF, DOC, etc.) or provide URL below"
+                                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                                    maxSize={50}
+                                    onFileSelect={(file) => handleDocumentFileSelect(document.id, file)}
+                                    onFileRemove={() => handleDocumentFileRemove(document.id)}
+                                    currentFile={documentFiles.has(document.id) ? documentFiles.get(document.id)?.name : ''}
+                                  />
+                                </div>
+                                
+                                <input
+                                  type="url"
+                                  placeholder="Or provide document URL"
+                                  value={document.url}
+                                  onChange={(e) => updateDocument(chapter.id, document.id, 'url', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+                              
+                              <textarea
+                                placeholder="Document description (optional)"
+                                value={document.description || ''}
+                                onChange={(e) => updateDocument(chapter.id, document.id, 'description', e.target.value)}
+                                rows={2}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Agents */}
                       {chapter.agents.length > 0 && (
                         <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900 flex items-center">
+                          <h4 className="font-medium text-gray-900 flex items-center text-responsive-sm">
                             <Bot className="w-4 h-4 mr-2" />
                             Agents
                           </h4>
                           {chapter.agents.map((agent, agentIndex) => (
-                            <div key={agent.id} className="p-4 bg-purple-50 rounded-lg space-y-3">
-                              <div className="flex items-center justify-between">
+                            <div key={agent.id} className="content-item-card agent-card">
+                              <div className="content-item-header">
                                 <span className="text-sm font-medium text-gray-700">
                                   Agent {agentIndex + 1}
                                 </span>
@@ -603,7 +769,7 @@ const CourseAdd: React.FC = () => {
                                 </button>
                               </div>
                               
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                              <div className="content-item-fields">
                                 <input
                                   type="text"
                                   placeholder="Agent Title"
@@ -640,8 +806,8 @@ const CourseAdd: React.FC = () => {
                         </div>
                       )}
                       
-                      {chapter.videos.length === 0 && chapter.agents.length === 0 && (
-                        <p className="text-sm text-gray-500 italic">No videos or agents added to this chapter yet.</p>
+                      {chapter.videos.length === 0 && chapter.agents.length === 0 && chapter.documents.length === 0 && (
+                        <p className="text-sm text-gray-500 italic">No content added to this chapter yet.</p>
                       )}
                     </div>
                   )}
@@ -656,14 +822,14 @@ const CourseAdd: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/admin/courses')}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="btn-responsive border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-responsive bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating...' : 'Create Course'}
           </button>

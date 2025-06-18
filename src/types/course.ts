@@ -4,6 +4,7 @@ export interface Chapter {
   description?: string;
   videos: Video[];
   agents: Agent[];
+  documents: Document[];
 }
 
 export interface Video {
@@ -22,6 +23,16 @@ export interface Agent {
   conversationalContext: string;
   description?: string;
   type: 'agent';
+}
+
+export interface Document {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+  isSpecial: boolean;
+  completed?: boolean;
+  type: 'document';
 }
 
 export interface Course {

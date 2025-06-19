@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BookOpen, Plus, Home, Settings, Users, LogOut, Shield, BarChart3, FileText } from 'lucide-react';
+import { BookOpen, Plus, Home, Settings, Users, LogOut, Shield, BarChart3, FileText, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -16,6 +16,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
     { icon: Home, label: 'Admin Dashboard', path: '/admin' },
     { icon: BookOpen, label: 'Manage Courses', path: '/admin/courses' },
     { icon: Plus, label: 'Add Course', path: '/admin/courses/add' },
+    { icon: HelpCircle, label: 'Manage Quizzes', path: '/admin/quizzes' },
     { icon: Users, label: 'Manage Students', path: '/admin/students' },
     { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
     { icon: FileText, label: 'Reports', path: '/admin/reports' },

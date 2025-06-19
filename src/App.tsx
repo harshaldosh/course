@@ -18,6 +18,10 @@ import CourseEdit from './pages/CourseEdit';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminCourseDetail from './pages/admin/AdminCourseDetail';
+import AdminQuizzes from './pages/admin/AdminQuizzes';
+import QuizCreate from './pages/admin/QuizCreate';
+import QuizTake from './pages/QuizTake';
+import QuizResult from './pages/QuizResult';
 
 function App() {
   return (
@@ -29,6 +33,10 @@ function App() {
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            
+            {/* Quiz routes (public access via URL) */}
+            <Route path="/quiz/:id" element={<QuizTake />} />
+            <Route path="/quiz/:quizId/result/:attemptId" element={<QuizResult />} />
             
             {/* Protected routes with Layout */}
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -57,6 +65,8 @@ function App() {
               <Route path="courses/add" element={<CourseAdd />} />
               <Route path="courses/:id" element={<AdminCourseDetail />} />
               <Route path="courses/:id/edit" element={<CourseEdit />} />
+              <Route path="quizzes" element={<AdminQuizzes />} />
+              <Route path="quizzes/create" element={<QuizCreate />} />
               <Route path="students" element={
                 <div className="p-6">
                   <h1 className="text-2xl font-bold">Student Management</h1>
